@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { supabase, type Client, type Profile } from "../lib/supabase";
-import { Modal } from "./ui";
+import { Field, Modal } from "./ui";
+import { safeUrl } from "../lib/format";
 
 type Draft = Partial<Client>;
 
@@ -34,6 +35,13 @@ export default function ClientForm({ client, isAdmin, onClose, onSaved }: {
     for (const k of Object.keys(payload)) if (payload[k] === "") payload[k] = null;
     if (!isAdmin) { delete payload.assigned_employee_id; delete payload.portal_user_id; delete payload.client_code; }
     payload.client_code = payload.client_code ? String(payload.client_code).replace(/^#/, "").trim() : payload.client_code;
+    // Links must be real web addresses (adds https:// when missing; blocks javascript: and other schemes).
+    for (const [k, label] of [["website", "Website"], ["drive_folder_url", "Google Drive folder URL"], ["content_plan_url", "Content plan URL"]] as const) {
+      if (payload[k] == null) continue;
+      const safe = safeUrl(String(payload[k]));
+      if (!safe) { setBusy(false); setErr(`${label} must be a web link, e.g. https://example.com`); return; }
+      payload[k] = safe;
+    }
 
     const q = client
       ? supabase.from("clients").update(payload).eq("id", client.id).select("id").single()
@@ -49,41 +57,42 @@ export default function ClientForm({ client, isAdmin, onClose, onSaved }: {
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" form="client-form" disabled={busy}>{busy ? "Saving…" : "Save"}</button></>}>
       {err && <div className="alert">{err}</div>}
       <form id="client-form" onSubmit={save} className="form-grid">
-        <div className="field"><label>Client code *</label>
-          <input required disabled={!isAdmin} placeholder="e.g. 294" value={d.client_code ?? ""} onChange={(e) => set("client_code", e.target.value)} /></div>
-        <div className="field"><label>Company / brand name *</label>
-          <input required value={d.company_name ?? ""} onChange={(e) => set("company_name", e.target.value)} /></div>
+        <Field label="Client code *">
+          <input required disabled={!isAdmin} placeholder="e.g. 294" value={d.client_code ?? ""} onChange={(e) => set("client_code", e.target.value)} /></Field>
+        <Field label="Company / brand name *">
+          <input required value={d.company_name ?? ""} onChange={(e) => set("company_name", e.target.value)} /></Field>
         {TEXT_FIELDS.map(([k, label, type]) => (
-          <div className="field" key={k}><label>{label}</label>
-            <input type={type ?? "text"} value={(d[k] as string) ?? ""} onChange={(e) => set(k, e.target.value)} /></div>
+          <Field key={k} label={label}>
+            <input type={type === "url" ? "text" : type ?? "text"} inputMode={type === "url" ? "url" : undefined}
+              autoComplete="off" value={(d[k] as string) ?? ""} onChange={(e) => set(k, e.target.value)} /></Field>
         ))}
-        <div className="field"><label>Content language</label>
-          <input value={d.language ?? ""} onChange={(e) => set("language", e.target.value)} placeholder="English / Hindi / Hinglish…" /></div>
-        <div className="field"><label>Plan name</label>
-          <input value={d.plan_name ?? ""} onChange={(e) => set("plan_name", e.target.value)} placeholder="e.g. 3-month 30S+15V" /></div>
-        <div className="field"><label>Static posts</label>
-          <input type="number" min={0} value={d.static_posts ?? 0} onChange={(e) => set("static_posts", +e.target.value)} /></div>
-        <div className="field"><label>Video posts</label>
-          <input type="number" min={0} value={d.video_posts ?? 0} onChange={(e) => set("video_posts", +e.target.value)} /></div>
-        <div className="field"><label>Carousel posts</label>
-          <input type="number" min={0} value={d.carousel_posts ?? 0} onChange={(e) => set("carousel_posts", +e.target.value)} /></div>
-        <div className="field"><label>Plan start</label>
-          <input type="date" value={d.plan_start ?? ""} onChange={(e) => set("plan_start", e.target.value)} /></div>
-        <div className="field"><label>Plan end / deadline</label>
-          <input type="date" value={d.plan_end ?? ""} onChange={(e) => set("plan_end", e.target.value)} /></div>
+        <Field label="Content language">
+          <input value={d.language ?? ""} onChange={(e) => set("language", e.target.value)} placeholder="English / Hindi / Hinglish…" /></Field>
+        <Field label="Plan name">
+          <input value={d.plan_name ?? ""} onChange={(e) => set("plan_name", e.target.value)} placeholder="e.g. 3-month 30S+15V" /></Field>
+        <Field label="Static posts">
+          <input type="number" min={0} value={d.static_posts ?? 0} onChange={(e) => set("static_posts", +e.target.value)} /></Field>
+        <Field label="Video posts">
+          <input type="number" min={0} value={d.video_posts ?? 0} onChange={(e) => set("video_posts", +e.target.value)} /></Field>
+        <Field label="Carousel posts">
+          <input type="number" min={0} value={d.carousel_posts ?? 0} onChange={(e) => set("carousel_posts", +e.target.value)} /></Field>
+        <Field label="Plan start">
+          <input type="date" value={d.plan_start ?? ""} onChange={(e) => set("plan_start", e.target.value)} /></Field>
+        <Field label="Plan end / deadline">
+          <input type="date" value={d.plan_end ?? ""} onChange={(e) => set("plan_end", e.target.value)} /></Field>
         {isAdmin && (
-          <div className="field"><label>Assigned employee</label>
+          <Field label="Assigned employee">
             <select value={d.assigned_employee_id ?? ""} onChange={(e) => set("assigned_employee_id", e.target.value)}>
               <option value="">— Unassigned —</option>
               {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name || s.email}</option>)}
-            </select></div>
+            </select></Field>
         )}
-        <div className="field"><label>Google Drive folder URL</label>
-          <input type="url" value={d.drive_folder_url ?? ""} onChange={(e) => set("drive_folder_url", e.target.value)} /></div>
-        <div className="field full"><label>Content plan URL</label>
-          <input type="url" value={d.content_plan_url ?? ""} onChange={(e) => set("content_plan_url", e.target.value)} /></div>
-        <div className="field full"><label>Internal notes</label>
-          <textarea value={d.notes ?? ""} onChange={(e) => set("notes", e.target.value)} /></div>
+        <Field label="Google Drive folder URL">
+          <input inputMode="url" placeholder="https://drive.google.com/…" value={d.drive_folder_url ?? ""} onChange={(e) => set("drive_folder_url", e.target.value)} /></Field>
+        <Field label="Content plan URL" full>
+          <input inputMode="url" placeholder="https://…" value={d.content_plan_url ?? ""} onChange={(e) => set("content_plan_url", e.target.value)} /></Field>
+        <Field label="Internal notes" full>
+          <textarea value={d.notes ?? ""} onChange={(e) => set("notes", e.target.value)} /></Field>
         <div className="field full">
           <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input type="checkbox" style={{ width: "auto" }} checked={!!d.is_on_hold} onChange={(e) => set("is_on_hold", e.target.checked)} />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase, type Stage } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { Empty, Loading, Progress, StageBadge, Stepper } from "../components/ui";
+import { Empty, ExtLink, Loading, Progress, StageBadge, Stepper } from "../components/ui";
 import { fmtDate } from "../lib/format";
 
 interface Project {
@@ -53,8 +53,8 @@ export default function Portal() {
           <dl className="kv">
             <dt>Account manager</dt><dd>{p.account_manager ?? "—"}</dd>
             <dt>Plan period</dt><dd>{p.plan_start || p.plan_end ? `${fmtDate(p.plan_start)} – ${fmtDate(p.plan_end)}` : "Not set yet"}</dd>
-            <dt>Content plan</dt><dd>{p.content_plan_url ? <a href={p.content_plan_url} target="_blank" rel="noreferrer">Open content plan</a> : "Not shared yet"}</dd>
-            <dt>Creatives folder</dt><dd>{p.drive_folder_url ? <a href={p.drive_folder_url} target="_blank" rel="noreferrer">Open Google Drive folder</a> : "Not shared yet"}</dd>
+            <dt>Content plan</dt><dd>{p.content_plan_url ? <ExtLink href={p.content_plan_url}>Open content plan</ExtLink> : "Not shared yet"}</dd>
+            <dt>Creatives folder</dt><dd>{p.drive_folder_url ? <ExtLink href={p.drive_folder_url}>Open Google Drive folder</ExtLink> : "Not shared yet"}</dd>
           </dl>
         </div>
       ))}

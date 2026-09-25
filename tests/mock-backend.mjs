@@ -3,14 +3,21 @@ const today = new Date();
 const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const addDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return iso(d); };
 
-export function makeStore() {
-  const P = (id, email, full_name, role, extra = {}) => ({ id, email, full_name, role, phone: null, designation: null, is_active: true, created_at: "2026-09-01T10:00:00Z", ...extra });
+export const CONSENT = "2026-09-25";
+export function makeStore({ preMigration = false } = {}) {
+  const P = (id, email, full_name, role, extra = {}) => {
+    const base = { id, email, full_name, role, phone: null, designation: null, is_active: true, created_at: "2026-09-01T10:00:00Z" };
+    const mig = preMigration ? {} : { consent_version: CONSENT, consent_at: "2026-09-02T10:00:00Z", deletion_requested_at: null };
+    return { ...base, ...mig, ...extra };
+  };
   const profiles = [
     P("u-admin", "admin@test.in", "Asha Admin", "admin", { designation: "Founder" }),
     P("u-emp", "emp@test.in", "Ravi Employee", "employee", { designation: "Content writer" }),
     P("u-emp2", "emp2@test.in", "Neha Designer", "employee", { designation: "Designer" }),
     P("u-client", "client@test.in", "Kapoor Client", "client"),
     P("u-pending", "pending@test.in", "New Person", "pending"),
+    P("u-client2", "client2@test.in", "Unlinked Client", "client"),
+    ...(preMigration ? [] : [P("u-new", "new@test.in", "Fresh Employee", "employee", { consent_version: null, consent_at: null })]),
   ];
   const stages = ["intake","research","content_plan","client_review","revisions","generation","delivery","final_approval","posting","completed"];
   const labels = ["Intake","Research","Content plan","Client review","Revisions","Image/Video creation","Delivery","Final approval","Posting","Completed"];
@@ -51,7 +58,8 @@ export function makeStore() {
     id: p.id, full_name: p.full_name, email: p.email, designation: p.designation, role: p.role, is_active: p.is_active,
     active_clients: clients.filter((c) => c.assigned_employee_id === p.id && c.stage !== "completed").length,
     open_tasks: tasks.filter((t) => t.assignee_id === p.id && t.status !== "done").length, in_progress_tasks: 1, overdue_tasks: p.id === "u-emp" ? 1 : 0, done_last_7d: 2 }));
-  return { profiles, stage_settings, clients, client_overview: clients, tasks, client_rules, activity_log, employee_workload };
+  const site_info = preMigration ? undefined : [{ id: 1, business_name: "Curlywave", legal_name: "Curlywave Media Pvt Ltd", address: "Delhi, India", contact_email: "hello@curlywave.test", contact_phone: "9999999999", grievance_officer: "Asha Admin", grievance_email: "privacy@curlywave.test" }];
+  return { profiles, stage_settings, clients, client_overview: clients, tasks, client_rules, activity_log, employee_workload, ...(site_info ? { site_info } : {}) };
 }
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
@@ -59,6 +67,7 @@ const jwt = (sub) => `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub, role: "a
 
 /** Visibility rules mirroring the real database RLS. */
 function visible(table, rows, me, store) {
+  if (table === "site_info") return rows; // public
   const p = store.profiles.find((x) => x.id === me);
   if (!p) return [];
   if (p.role === "admin") return rows;
@@ -82,12 +91,14 @@ function applyFilters(rows, params) {
     else if (op === "neq") out = out.filter((r) => String(r[k]) !== val);
     else if (op === "in") { const set = val.replace(/^\(|\)$/g, "").split(",").map((s) => s.replace(/"/g, "")); out = out.filter((r) => set.includes(String(r[k]))); }
     else if (op === "is") out = out.filter((r) => (val === "null" ? r[k] == null : String(r[k]) === val));
+    else if (op === "not" && val === "is.null") out = out.filter((r) => { if (!(k in r)) throw new Error("column " + k + " does not exist"); return r[k] != null; });
   }
   return out;
 }
 
 export async function installMock(page, store, opts = {}) {
   let me = opts.loggedInAs ?? null;
+  if (!opts.showCookieNotice) await page.addInitScript(() => { try { localStorage.setItem("cw-cookie-notice", "1"); } catch { /* */ } });
   const calls = [];
   const userObj = (id) => { const p = store.profiles.find((x) => x.id === id); return { id, aud: "authenticated", role: "authenticated", email: p.email, app_metadata: {}, user_metadata: {}, created_at: p.created_at }; };
   const session = (id) => ({ access_token: jwt(id), token_type: "bearer", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: "r-" + id, user: userObj(id) });
@@ -118,7 +129,7 @@ export async function installMock(page, store, opts = {}) {
       return me ? json(userObj(me)) : json({ msg: "no user" }, 401);
     }
     if (path === "/auth/v1/logout") { me = null; return route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*" } }); }
-    if (path === "/auth/v1/signup") return json({ id: "new", email: "x", user: null, session: null });
+    if (path === "/auth/v1/signup") { store.lastSignup = JSON.parse(req.postData() || "{}"); return json({ id: "new", email: "x", user: null, session: null }); }
     if (path === "/auth/v1/recover") return json({});
     if (path.startsWith("/functions/v1/admin-users")) return json({ ok: true, user_id: "u-new" });
     if (path === "/rest/v1/rpc/my_projects") {
@@ -134,7 +145,8 @@ export async function installMock(page, store, opts = {}) {
     const vis = visible(table, rows, me, store);
 
     if (req.method() === "GET" || req.method() === "HEAD") {
-      const out = applyFilters(vis, url.searchParams);
+      let out;
+      try { out = applyFilters(vis, url.searchParams); } catch (e) { return json({ code: "42703", message: e.message }, 400); }
       if (single) return out.length ? json(out[0]) : json({ code: "PGRST116", message: "0 rows" }, 406);
       return json(out);
     }
@@ -148,6 +160,9 @@ export async function installMock(page, store, opts = {}) {
     if (req.method() === "PATCH") {
       const body = JSON.parse(req.postData() || "{}");
       const hits = applyFilters(vis, url.searchParams);
+      if (table === "profiles" && Object.keys(body).some((k) => ["consent_version", "deletion_requested_at"].includes(k)) && hits.some((h) => !("consent_version" in h)))
+        return json({ code: "42703", message: `column "${Object.keys(body)[0]}" of relation "profiles" does not exist` }, 400);
+      if (table === "profiles" && "consent_version" in body) body.consent_at = new Date().toISOString();
       hits.forEach((h) => Object.assign(h, body));
       if (table === "clients") hits.forEach((h) => { const ov = store.clients.find((c) => c.id === h.id); if (ov && body.stage) { const i = ["intake","research","content_plan","client_review","revisions","generation","delivery","final_approval","posting","completed"].indexOf(body.stage); ov.stage_position = i + 1; ov.progress_pct = Math.round(i * 100 / 9); ov.stage_label = store.stage_settings[i].label; } });
       return json(single ? hits[0] ?? null : hits);

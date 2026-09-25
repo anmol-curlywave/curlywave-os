@@ -13,6 +13,29 @@ export type Priority = "low" | "normal" | "high" | "urgent";
 export interface Profile {
   id: string; email: string; full_name: string; phone: string | null;
   designation: string | null; role: Role; is_active: boolean; created_at: string;
+  /** Added in migration 0006 — undefined while that migration isn't applied yet. */
+  consent_version?: string | null; consent_at?: string | null; deletion_requested_at?: string | null;
+}
+
+/** Bump this when the Privacy Policy or Terms change in a way users must agree to again. */
+export const CONSENT_VERSION = "2026-09-25";
+
+export interface SiteInfo {
+  business_name: string; legal_name: string; address: string; contact_email: string; contact_phone: string;
+  grievance_officer: string; grievance_email: string; updated_at?: string;
+}
+export const SITE_INFO_FALLBACK: SiteInfo = {
+  business_name: "Curlywave", legal_name: "[FILL IN: registered business name]", address: "[FILL IN: registered address]",
+  contact_email: "[FILL IN: contact email]", contact_phone: "[FILL IN: contact phone]",
+  grievance_officer: "[FILL IN: grievance officer name]", grievance_email: "[FILL IN: grievance officer email]",
+};
+/** Public business details for the legal pages (readable without signing in). */
+export async function fetchSiteInfo(): Promise<SiteInfo> {
+  try {
+    const { data, error } = await supabase.from("site_info").select("*").eq("id", 1).maybeSingle();
+    if (error || !data) return SITE_INFO_FALLBACK;
+    return data as SiteInfo;
+  } catch { return SITE_INFO_FALLBACK; }
 }
 
 export interface Client {

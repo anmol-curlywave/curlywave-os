@@ -1,26 +1,58 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useRef, type ReactElement, type ReactNode } from "react";
+import { safeUrl } from "../lib/format";
 import { STAGES, type Stage, type TaskStatus, type Priority } from "../lib/supabase";
 
 export function Modal({ title, onClose, children, footer }: {
   title: string; onClose: () => void; children: ReactNode; footer?: ReactNode;
 }) {
+  const titleId = useId();
+  const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
+  useEffect(() => {
+    // Keyboard users land inside the dialog, and go back where they were when it closes.
+    const before = document.activeElement as HTMLElement | null;
+    const first = box.current?.querySelector<HTMLElement>(".modal-body input:not([disabled]), .modal-body select:not([disabled]), .modal-body textarea, .modal-body button");
+    (first ?? box.current)?.focus();
+    return () => { before?.focus?.(); };
+  }, []);
   return (
     <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-label={title}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={box} tabIndex={-1}>
         <div className="modal-head">
-          <h2>{title}</h2>
-          <button className="btn sm" onClick={onClose} aria-label="Close">✕</button>
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" className="btn sm" onClick={onClose} aria-label="Close">✕</button>
         </div>
-        {children}
+        <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
       </div>
     </div>
   );
+}
+
+/** A form field whose label is properly linked to its input (screen readers + click-to-focus). */
+export function Field({ label, children, full, id: given }: { label: ReactNode; children: ReactNode; full?: boolean; id?: string }) {
+  const auto = useId();
+  const id = given ?? auto;
+  const child = !given && isValidElement(children)
+    ? cloneElement(children as ReactElement<{ id?: string }>, { id })
+    : children;
+  return (
+    <div className={`field${full ? " full" : ""}`}>
+      <label htmlFor={id}>{label}</label>
+      {child}
+    </div>
+  );
+}
+
+/** Opens only real web links (http/https) in a new tab; anything else is shown as plain text. */
+export function ExtLink({ href, children }: { href: string | null | undefined; children?: ReactNode }) {
+  const safe = safeUrl(href);
+  if (!safe) return <span title="Not a valid web link">{href || "—"}</span>;
+  return <a href={safe} target="_blank" rel="noopener noreferrer">{children ?? href}</a>;
 }
 
 export function Progress({ pct, tone }: { pct: number; tone?: "bad" | "ok" }) {
@@ -77,4 +109,15 @@ export function Empty({ children }: { children: ReactNode }) {
 
 export function Loading() {
   return <div className="empty">Loading…</div>;
+}
+
+/** Props that make a clickable table row work with the keyboard too (Tab to it, Enter to open). */
+export function rowLink(go: () => void) {
+  return {
+    className: "clickable",
+    tabIndex: 0,
+    role: "link",
+    onClick: go,
+    onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } },
+  };
 }

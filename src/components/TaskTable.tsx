@@ -19,7 +19,7 @@ export default function TaskTable({ tasks, names, clientNames, onEdit, onChanged
 
   return (
     <div className="table-wrap"><table>
-      <thead><tr><th>Task</th>{!hideClient && <th>Client</th>}<th>Assigned to</th><th>Due</th><th>Status</th><th /></tr></thead>
+      <thead><tr><th>Task</th>{!hideClient && <th>Client</th>}<th>Assigned to</th><th>Due</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
       <tbody>
         {tasks.map((t) => {
           const late = isOverdue(t.due_date, t.status === "done");
@@ -35,11 +35,11 @@ export default function TaskTable({ tasks, names, clientNames, onEdit, onChanged
               <td>{t.assignee_id ? names[t.assignee_id] ?? "—" : <span className="muted">Unassigned</span>}</td>
               <td>{late ? <span className="badge bad">{fmtDate(t.due_date)}</span> : fmtDate(t.due_date)}</td>
               <td>
-                <select value={t.status} onChange={(e) => setStatus(t, e.target.value as TaskStatus)} style={{ width: 130 }}>
+                <select aria-label={`Status of ${t.title}`} value={t.status} onChange={(e) => setStatus(t, e.target.value as TaskStatus)} style={{ width: 130 }}>
                   {TASK_STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
               </td>
-              <td><button className="btn sm" onClick={() => onEdit(t)}>Edit</button></td>
+              <td><button className="btn sm" aria-label={`Edit ${t.title}`} onClick={() => onEdit(t)}>Edit</button></td>
             </tr>
           );
         })}

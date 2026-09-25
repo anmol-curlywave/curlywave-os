@@ -78,17 +78,17 @@ export default function Tasks({ mine = false }: { mine?: boolean }) {
 
       <div className="card">
         <div className="row filters mb">
-          <div className="tabs" style={{ margin: 0, border: 0 }}>
-            <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>List</button>
-            <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}>Board</button>
+          <div className="tabs" style={{ margin: 0, border: 0 }} role="group" aria-label="View">
+            <button aria-pressed={view === "list"} className={view === "list" ? "active" : ""} onClick={() => setView("list")}>List</button>
+            <button aria-pressed={view === "board"} className={view === "board" ? "active" : ""} onClick={() => setView("board")}>Board</button>
           </div>
-          <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+          <select aria-label="Filter by person" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
             <option value="">Everyone</option>
             {mine && <option value={profile!.id}>Me</option>}
             {!mine && <option value="__none">Unassigned</option>}
             {!mine && staff.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
           </select>
-          <select value={client} onChange={(e) => setClient(e.target.value)}>
+          <select aria-label="Filter by client" value={client} onChange={(e) => setClient(e.target.value)}>
             <option value="">All clients</option>
             {Object.entries(clientNames).sort((a, b) => a[1].localeCompare(b[1])).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
           </select>
@@ -107,14 +107,14 @@ export default function Tasks({ mine = false }: { mine?: boolean }) {
                   <div className="col-head"><span>{s.label}</span><span className="muted">{col.length}</span></div>
                   {col.slice(0, 60).map((t) => (
                     <div className="tcard" key={t.id}>
-                      <div className="t"><a href="#" onClick={(e) => { e.preventDefault(); setModal(t); }}>{t.title}</a></div>
+                      <div className="t"><button type="button" className="linklike" onClick={() => setModal(t)}>{t.title}</button></div>
                       <div className="meta">
                         {t.client_id && <Link to={`/clients/${t.client_id}`}>{clientNames[t.client_id]}</Link>}
                         <PriorityBadge p={t.priority} />
                         {t.due_date && <span className={isOverdue(t.due_date, t.status === "done") ? "badge bad" : ""}>{fmtDate(t.due_date)}</span>}
                         {!mine && t.assignee_id && <span>{names[t.assignee_id]}</span>}
                       </div>
-                      <select className="mt" value={t.status} onChange={(e) => move(t, e.target.value as TaskStatus)} style={{ marginTop: 8, fontSize: 12, padding: "4px 8px" }}>
+                      <select aria-label={`Status of ${t.title}`} className="mt" value={t.status} onChange={(e) => move(t, e.target.value as TaskStatus)} style={{ marginTop: 8, fontSize: 12, padding: "4px 8px" }}>
                         {TASK_STATUSES.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
                       </select>
                     </div>

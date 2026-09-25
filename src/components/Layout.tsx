@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import InstallBanner from "./InstallBanner";
+import { Link } from "react-router-dom";
 
 const NAV = {
   admin: [
@@ -27,15 +28,16 @@ export default function Layout() {
 
   return (
     <>
+      <a className="skip-link" href="#main">Skip to main content</a>
       <div className="topbar-mobile">
         <div className="brand" style={{ padding: 0 }}><img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" /> Curlywave OS</div>
         <button className="btn sm" onClick={() => setOpen(!open)} aria-label="Menu" aria-expanded={open}>☰</button>
       </div>
       {open && <div className="backdrop" onClick={() => setOpen(false)} />}
       <div className="shell">
-        <aside className={`sidebar ${open ? "open" : ""}`} onClick={() => setOpen(false)}>
+        <aside className={`sidebar ${open ? "open" : ""}`} onClick={() => setOpen(false)} aria-label="Main menu">
           <div className="brand"><img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" /> Curlywave OS</div>
-          <nav className="nav">
+          <nav className="nav" aria-label="Main">
             {items.map((i) => (
               <NavLink key={i.to} to={i.to} end={i.to === "/"}
                 className={({ isActive }) => (isActive || (i.to !== "/" && loc.pathname.startsWith(i.to)) ? "active" : "")}>
@@ -48,9 +50,10 @@ export default function Layout() {
             <div className="name">{profile?.full_name || profile?.email}</div>
             <div className="role">{profile?.role}{profile?.designation ? ` · ${profile.designation}` : ""}</div>
             <button className="btn sm" onClick={signOut}>Sign out</button>
+            <div className="legal-links"><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/cookies">Cookies</Link></div>
           </div>
         </aside>
-        <main className="main">
+        <main className="main" id="main" tabIndex={-1}>
           <InstallBanner />
           <Outlet />
         </main>

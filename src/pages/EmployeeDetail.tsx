@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase, adminUsers, type ClientOverview, type Profile, type Task, type Workload } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { Empty, HealthBadge, Loading, Progress, StageBadge } from "../components/ui";
+import { Empty, HealthBadge, Loading, Progress, StageBadge, rowLink } from "../components/ui";
 import TaskTable from "../components/TaskTable";
 import TaskForm from "../components/TaskForm";
-import { byCode, byTaskPriority, randomPassword } from "../lib/format";
+import { byCode, byTaskPriority, fmtDateTime, randomPassword } from "../lib/format";
 
 export default function EmployeeDetail() {
   const { id } = useParams();
@@ -59,7 +59,16 @@ export default function EmployeeDetail() {
         </div>
         {!self && (
           <div className="row">
-            <select value={p.role} style={{ width: "auto" }} onChange={(e) => act({ action: "update", role: e.target.value }, "Role updated.")}>
+            <select aria-label="Role" value={p.role} style={{ width: "auto" }} onChange={(e) => {
+              const role = e.target.value;
+              const what: Record<string, string> = {
+                admin: "ADMIN — full access to every client, the team and settings",
+                employee: "EMPLOYEE — sees only their assigned clients and tasks",
+                client: "CLIENT — sees only their own project in the portal",
+              };
+              if (confirm(`Change ${p.email} to ${what[role]}?`)) act({ action: "update", role }, "Role updated.");
+              else e.target.value = p.role;
+            }}>
               <option value="employee">Employee</option><option value="admin">Admin</option><option value="client">Client</option>
             </select>
             <button className="btn" onClick={() => {
@@ -67,13 +76,24 @@ export default function EmployeeDetail() {
               if (confirm(`Set a new password for ${p.email}?\n\nNew password: ${pw}`)) act({ action: "reset_password", password: pw }, `New password for ${p.email}: ${pw}`);
             }}>Reset password</button>
             <button className={`btn ${p.is_active ? "danger" : ""}`}
-              onClick={() => act({ action: "update", is_active: !p.is_active }, p.is_active ? "Login disabled." : "Login enabled.")}>
+              onClick={() => {
+                if (p.is_active && !confirm(`Disable ${p.email}? They will be signed out and can't log in until you enable them again.`)) return;
+                act({ action: "update", is_active: !p.is_active }, p.is_active ? "Login disabled." : "Login enabled.");
+              }}>
               {p.is_active ? "Disable login" : "Enable login"}
             </button>
           </div>
         )}
       </div>
-      {msg && <div className={`alert ${msg.ok ? "ok" : ""}`}>{msg.text}</div>}
+      {msg && <div className={`alert ${msg.ok ? "ok" : ""}`} role="status">{msg.text}</div>}
+      {p.deletion_requested_at && (
+        <div className="alert">
+          <b>Asked for their data to be deleted</b> on {fmtDateTime(p.deletion_requested_at)}. Disable the login, remove or anonymise their personal details, then let them know.
+        </div>
+      )}
+      {"consent_version" in p && (
+        <p className="small muted">Privacy consent: {p.consent_at ? `agreed ${fmtDateTime(p.consent_at)} (version ${p.consent_version})` : "not given yet — they'll be asked at their next sign-in"}</p>
+      )}
 
       {w && (
         <div className="grid kpis mb">
@@ -92,7 +112,7 @@ export default function EmployeeDetail() {
             <thead><tr><th>Client</th><th>Stage</th><th style={{ width: 170 }}>Progress</th><th>Open tasks</th><th>Status</th></tr></thead>
             <tbody>
               {clients.map((c) => (
-                <tr key={c.id} className="clickable" onClick={() => nav(`/clients/${c.id}`)}>
+                <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
                   <td><b>#{c.client_code}</b> {c.company_name}</td>
                   <td><StageBadge stage={c.stage} /></td>
                   <td><div className="row"><Progress pct={c.progress_pct} tone={c.is_delayed ? "bad" : undefined} /><span className="small muted">{c.progress_pct}%</span></div></td>

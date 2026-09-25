@@ -45,3 +45,14 @@ export function byTaskPriority<T extends { status: keyof typeof STATUS_ORDER; du
   if (s) return s;
   return (a.due_date ?? "9999") < (b.due_date ?? "9999") ? -1 : (a.due_date ?? "9999") > (b.due_date ?? "9999") ? 1 : 0;
 }
+
+/** Make a user-typed link safe to open: adds https:// when missing, allows only http(s). Returns null if unusable. */
+export function safeUrl(u: string | null | undefined): string | null {
+  const s = (u ?? "").trim();
+  if (!s) return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(s) && !/^[^:/]+\.[^:/]+:\d/.test(s) ? s : "https://" + s.replace(/^\/+/, "");
+  try {
+    const x = new URL(withScheme);
+    return (x.protocol === "https:" || x.protocol === "http:") && x.hostname.includes(".") ? x.href : null;
+  } catch { return null; }
+}

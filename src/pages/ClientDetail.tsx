@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase, STAGES, stageLabel, type ClientOverview, type Profile, type Stage, type Task, adminUsers } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { HealthBadge, Loading, Modal, Progress, StageBadge, Stepper, Empty } from "../components/ui";
+import { ExtLink, Field, HealthBadge, Loading, Modal, Progress, StageBadge, Stepper, Empty } from "../components/ui";
 import ClientForm from "../components/ClientForm";
 import TaskForm from "../components/TaskForm";
 import TaskTable from "../components/TaskTable";
@@ -25,6 +25,7 @@ export default function ClientDetail() {
   const [editing, setEditing] = useState(false);
   const [taskModal, setTaskModal] = useState<Task | "new" | null>(null);
   const [err, setErr] = useState("");
+  const [moving, setMoving] = useState(false);
 
   const load = useCallback(async () => {
     const [cl, t, r, a, p] = await Promise.all([
@@ -45,8 +46,10 @@ export default function ClientDetail() {
   useRefreshOnFocus(load);
 
   async function moveStage(stage: Stage) {
-    setErr("");
+    if (moving) return;
+    setErr(""); setMoving(true);
     const { error } = await supabase.from("clients").update({ stage }).eq("id", id!);
+    setMoving(false);
     if (error) setErr(error.message); else load();
   }
 
@@ -54,7 +57,7 @@ export default function ClientDetail() {
   if (c === null) return <Empty>Client not found, or you don't have access. <Link to="/clients">Back to clients</Link></Empty>;
 
   const idx = STAGES.findIndex((s) => s.key === c.stage);
-  const prev = STAGES[idx - 1];
+  const prev = STAGES.find((s) => s.key === prevStage(c.stage, STAGES[idx - 1]?.key));
   const actions = nextActions(c.stage, STAGES[idx + 1]?.key);
   const openTasks = tasks.filter((t) => t.status !== "done");
 
@@ -81,9 +84,9 @@ export default function ClientDetail() {
         <div className="card-head">
           <h2>Pipeline</h2>
           <div className="row">
-            {prev && <button className="btn sm" onClick={() => moveStage(prev.key)}>← {prev.label}</button>}
+            {prev && <button className="btn sm" disabled={moving} onClick={() => moveStage(prev.key)}>← {prev.label}</button>}
             {actions.map((a) => (
-              <button key={a.to} className={`btn sm ${a.primary ? "primary" : ""}`} onClick={() => moveStage(a.to)}>{a.label}</button>
+              <button key={a.to} className={`btn sm ${a.primary ? "primary" : ""}`} disabled={moving} onClick={() => moveStage(a.to)}>{a.label}</button>
             ))}
           </div>
         </div>
@@ -96,10 +99,10 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <div className="tabs">
+      <div className="tabs" role="tablist" aria-label="Client sections">
         {([["overview", "Overview"], ["tasks", `Tasks (${openTasks.length})`], ["rules", `Rules (${rules.length})`], ["activity", "Activity"],
           ...(isAdmin ? [["portal", "Client login"]] : [])] as [typeof tab, string][]).map(([k, l]) => (
-          <button key={k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{l}</button>
+          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
 
@@ -114,7 +117,7 @@ export default function ClientDetail() {
               <dt>WhatsApp</dt><dd>{c.whatsapp ?? "—"}</dd>
               <dt>Industry</dt><dd>{c.industry ?? "—"}</dd>
               <dt>City</dt><dd>{c.city ?? "—"}</dd>
-              <dt>Website</dt><dd>{c.website ? <a href={c.website} target="_blank" rel="noreferrer">{c.website}</a> : "—"}</dd>
+              <dt>Website</dt><dd>{c.website ? <ExtLink href={c.website} /> : "—"}</dd>
               <dt>Instagram</dt><dd>{c.instagram ?? "—"}</dd>
               <dt>Facebook</dt><dd>{c.facebook ?? "—"}</dd>
               <dt>LinkedIn</dt><dd>{c.linkedin ?? "—"}</dd>
@@ -130,8 +133,8 @@ export default function ClientDetail() {
               <dt>Language</dt><dd>{c.language}</dd>
               <dt>Start</dt><dd>{fmtDate(c.plan_start)}</dd>
               <dt>Deadline</dt><dd>{fmtDate(c.plan_end)}</dd>
-              <dt>Drive folder</dt><dd>{c.drive_folder_url ? <a href={c.drive_folder_url} target="_blank" rel="noreferrer">Open folder</a> : "—"}</dd>
-              <dt>Content plan</dt><dd>{c.content_plan_url ? <a href={c.content_plan_url} target="_blank" rel="noreferrer">Open plan</a> : "—"}</dd>
+              <dt>Drive folder</dt><dd>{c.drive_folder_url ? <ExtLink href={c.drive_folder_url}>Open folder</ExtLink> : "—"}</dd>
+              <dt>Content plan</dt><dd>{c.content_plan_url ? <ExtLink href={c.content_plan_url}>Open plan</ExtLink> : "—"}</dd>
               <dt>On hold</dt><dd>{c.is_on_hold ? "Yes" : "No"}</dd>
             </dl>
             {c.notes && <><h3 className="mt">Internal notes</h3><p style={{ whiteSpace: "pre-wrap" }}>{c.notes}</p></>}
@@ -212,11 +215,11 @@ function Rules({ clientId, rules, isAdmin, onChanged }: { clientId: string; rule
       <p className="muted small">Standing instructions for this client (brand name, banned claims, colours, language…). Every AI step will follow these automatically.</p>
       {err && <div className="alert">{err}</div>}
       <form onSubmit={add} className="row mb">
-        <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ width: 150 }}>
+        <select aria-label="Rule category" value={cat} onChange={(e) => setCat(e.target.value)} style={{ width: 150 }}>
           <option value="general">General</option><option value="brand">Brand</option><option value="content">Content</option>
           <option value="visual">Visual</option><option value="video">Video</option><option value="compliance">Compliance</option>
         </select>
-        <input style={{ flex: 1, minWidth: 220 }} placeholder='e.g. Never say "cure"; brand name is always "Tiwari Motors"' value={text} onChange={(e) => setText(e.target.value)} />
+        <input aria-label="New rule" style={{ flex: 1, minWidth: 220 }} placeholder='e.g. Never say "cure"; brand name is always "Tiwari Motors"' value={text} onChange={(e) => setText(e.target.value)} />
         <button className="btn primary">Add rule</button>
       </form>
       {rules.length === 0 ? <Empty>No rules yet.</Empty> : (
@@ -236,11 +239,14 @@ function Rules({ clientId, rules, isAdmin, onChanged }: { clientId: string; rule
 
 function PortalLogin({ client, names, onChanged }: { client: ClientOverview; names: Record<string, string>; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [email, setEmail] = useState(client.email ?? "");
   const [name, setName] = useState(client.contact_name ?? "");
   const [password, setPassword] = useState(randomPassword());
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [logins, setLogins] = useState<Profile[]>([]);
+  const [pick, setPick] = useState("");
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -254,8 +260,29 @@ function PortalLogin({ client, names, onChanged }: { client: ClientOverview; nam
     setBusy(false);
   }
 
+  async function openLink() {
+    setMsg(null);
+    const { data, error } = await supabase.from("profiles").select("*").eq("role", "client").order("full_name");
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    setLogins((data as Profile[]) ?? []);
+    setPick("");
+    setLinking(true);
+  }
+
+  async function link(e: FormEvent) {
+    e.preventDefault();
+    if (!pick) return;
+    setBusy(true);
+    const { error } = await supabase.from("clients").update({ portal_user_id: pick }).eq("id", client.id);
+    setBusy(false);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    setLinking(false);
+    setMsg({ ok: true, text: "Login linked. The client now sees this project when they sign in." });
+    onChanged();
+  }
+
   async function unlink() {
-    if (!confirm("Remove this client's portal access? (Their login stays but sees nothing.)")) return;
+    if (!confirm("Remove this client's portal access? (Their login stays, sees nothing, and can be linked again later.)")) return;
     const { error } = await supabase.from("clients").update({ portal_user_id: null }).eq("id", client.id);
     if (error) setMsg({ ok: false, text: error.message }); else onChanged();
   }
@@ -264,29 +291,54 @@ function PortalLogin({ client, names, onChanged }: { client: ClientOverview; nam
     <div className="card">
       <h2>Client portal login</h2>
       <p className="muted small">The client uses this login to see their project progress. Plan approval, change requests and the chatbot will also appear here in later phases.</p>
-      {msg && <div className={`alert ${msg.ok ? "ok" : ""}`}>{msg.text}</div>}
+      {msg && <div className={`alert ${msg.ok ? "ok" : ""}`} role="status">{msg.text}</div>}
       {client.portal_user_id ? (
         <div className="row">
           <span>Linked login: <b>{names[client.portal_user_id] ?? "Client user"}</b></span>
+          <Link className="btn sm" to={`/employees/${client.portal_user_id}`}>Manage login</Link>
           <button className="btn sm danger" onClick={unlink}>Remove access</button>
         </div>
       ) : (
-        <button className="btn primary" onClick={() => setOpen(true)}>Create client login</button>
+        <div className="row">
+          <button className="btn primary" onClick={() => setOpen(true)}>Create client login</button>
+          <button className="btn" onClick={openLink}>Link existing login</button>
+        </div>
       )}
       {open && (
         <Modal title="Create client login" onClose={() => setOpen(false)}
           footer={<><button className="btn" onClick={() => setOpen(false)}>Cancel</button><button className="btn primary" form="portal-form" disabled={busy}>{busy ? "Creating…" : "Create"}</button></>}>
           <form id="portal-form" onSubmit={create}>
-            <div className="field"><label>Client's name</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
-            <div className="field"><label>Login email *</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div className="field"><label>Password * (share this with the client)</label>
-              <div className="row"><input required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} style={{ flex: 1 }} />
+            <Field label="Client's name"><input value={name} onChange={(e) => setName(e.target.value)} /></Field>
+            <Field label="Login email *"><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+            <div className="field"><label htmlFor="portal-pw">Password * (share this with the client)</label>
+              <div className="row"><input id="portal-pw" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} style={{ flex: 1 }} />
                 <button type="button" className="btn sm" onClick={() => setPassword(randomPassword())}>New</button></div></div>
+          </form>
+        </Modal>
+      )}
+      {linking && (
+        <Modal title="Link an existing client login" onClose={() => setLinking(false)}
+          footer={<><button className="btn" onClick={() => setLinking(false)}>Cancel</button><button className="btn primary" form="link-form" disabled={busy || !pick}>{busy ? "Linking…" : "Link login"}</button></>}>
+          <form id="link-form" onSubmit={link}>
+            {logins.length === 0 ? <Empty>No client logins yet. Approve someone as a client on the Team page, or use "Create client login".</Empty> : (
+              <Field label="Client login">
+                <select required value={pick} onChange={(e) => setPick(e.target.value)}>
+                  <option value="">— Choose a login —</option>
+                  {logins.map((u) => <option key={u.id} value={u.id}>{(u.full_name || "—") + " · " + u.email + (u.is_active ? "" : " (disabled)")}</option>)}
+                </select>
+              </Field>
+            )}
           </form>
         </Modal>
       )}
     </div>
   );
+}
+
+/** "Back" follows the real flow: creation goes back to client review (not revisions), revisions back to review. */
+function prevStage(stage: Stage, before: Stage | undefined): Stage | undefined {
+  if (stage === "generation" || stage === "revisions") return "client_review";
+  return before;
 }
 
 /** Review stages branch: the client either approves or asks for changes. Other stages just move forward. */

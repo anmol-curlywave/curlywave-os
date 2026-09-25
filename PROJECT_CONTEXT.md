@@ -2,7 +2,7 @@
 
 > **Starting a new chat?** Upload this file (or the whole zip) and say:
 > *"Continue building Curlywave OS from PROJECT_CONTEXT.md. Code is in my Curlywave-OS folder on the Desktop."*
-> Last updated: 25 Sep 2026 (moved hosting to GitHub).
+> Last updated: 25 Sep 2026 (compliance + security pass: legal pages, DPDP consent, accessibility, review fixes).
 
 ---
 
@@ -83,6 +83,12 @@ His PC ("anmol-pc", Windows) has Node.js and Git installed. The code folder is `
   - Reassigning a client moves its open auto tasks to the new employee.
   - A task status change sets `completed_at` and logs activity.
   - Guard triggers stop non-admins changing roles or client ownership; the service role bypasses them.
+- `0006_compliance_and_hardening` (**written, NOT yet applied — Shreejal must paste it into the Supabase SQL editor**; Claude's apply was blocked by the permission check):
+  - Admin bootstrap by email only works while **no active admin exists** (self-signups aren't email-verified).
+  - `profiles` gets `consent_version`, `consent_at`, `deletion_requested_at` (timestamps set by the server).
+  - `guard_task_update` trigger: employees can't reassign tasks (except within their own client), move tasks to other people's clients, or change `auto_generated`/`created_by`.
+  - `site_info` table (single row): business/legal details for the public legal pages. Anyone can read; only admins can edit (Settings → Business & legal details). Starts with `[FILL IN: …]` placeholders.
+  - The app works before and after 0006 is applied (it checks whether the new columns exist).
 - `0002_harden_functions` moves helpers to `private`. `0003_guards_allow_service` lets the service role through the guards. `0004_portal_gating` adds the portal link rules. `0005_timezone_ist` sets IST.
 - Security advisor: clean. The only notice is `my_projects` being callable by signed-in users, which is intended.
 
@@ -105,7 +111,10 @@ His PC ("anmol-pc", Windows) has Node.js and Git installed. The code folder is `
   - `EmployeeDetail`: role, reset password, disable login, clients handled, pending work.
   - `Settings`: days allowed per stage and auto-task titles.
   - `Portal` (client).
-  - `Account`: own name, phone and password. Also the "set new password" screen.
+  - `Account`: own name, phone and password. Also the "set new password" screen. **Your data & privacy**: download my data (JSON), request/cancel deletion.
+  - `Legal` (public, no login): `/privacy`, `/terms`, `/cookies`. Business details come from `site_info`. Written for India's DPDP Act 2023. Policy version = `CONSENT_VERSION` in `lib/supabase.ts` — bump it when the policies change and everyone is asked to agree again.
+  - `Consent`: shown after sign-in when `consent_version` ≠ current version.
+- Compliance / accessibility pieces: `CookieNotice` (one-time, essential storage only, no tracking), signup consent checkbox, `LegalFooter`, `Field` (label ↔ input linking), `ExtLink` + `safeUrl()` (only http/https links; adds `https://`), `rowLink()` (keyboard-openable table rows), skip link, focus outlines, colours meet WCAG AA contrast.
 
 ## 7. Testing
 - `tests/ui.test.mjs` + `tests/mock-backend.mjs`: Playwright with an in-memory fake Supabase that mirrors RLS. It covers:
@@ -114,11 +123,13 @@ His PC ("anmol-pc", Windows) has Node.js and Git installed. The code folder is `
   - all main flows
   - horizontal-overflow checks
   - PWA checks (manifest, icons, service worker, offline)
-  - **Last run: 218/218 passed.**
+  - Also: legal pages, cookie notice, signup consent, consent screen, data download/deletion, safe links, link-existing-login, role-change confirm, back button, every form field labelled, keyboard row open, and a "before migration 0006" mode.
+  - **Last run: 297/297 passed.**
   - To run: `npm run build`, then `npx vite preview --port 4173`, then `node tests/ui.test.mjs`. The Playwright path is hard-coded to the Claude sandbox's global install.
 - `desktop/tests/desktop.test.mjs`: Playwright + Electron under xvfb. **Last run: 10/10 passed.** Set `CURLYWAVE_APP_URL` to point the desktop app at another URL; this only works when not packaged.
-- Database RLS/trigger test: a SQL `DO` block that acts as each role and ends with `raise exception 'ALL_TESTS_PASSED'`, so everything rolls back. **Last run: 13/13 passed.**
-- **Test accounts exist in Supabase:** `qa-admin@`, `qa-emp1@`, `qa-emp2@`, `qa-client@`, `qa-stranger@curlywave.test`. **Delete them once live testing is done**, or before real use.
+- `tests/db/`: runs all migrations on a local Postgres 16 with a stub `auth` schema and checks the rules (see `tests/db/README.md`). **Last run: 22/22 passed.**
+- Database RLS/trigger test (live): a SQL `DO` block that acts as each role and ends with `raise exception 'ALL_TESTS_PASSED'`, so everything rolls back. **Last run: 13/13 passed.**
+- Test accounts were deleted after live testing. For future live tests, create temporary `qa-*@curlywave.test` users and delete them afterwards.
 
 ## 8. Build notes
 - **Web:** `npm run build` produces `dist/`. A vite plugin in `vite.config.ts` stamps the service worker version and copies `index.html` to `404.html` so GitHub Pages serves the app on every path.
@@ -136,22 +147,51 @@ His PC ("anmol-pc", Windows) has Node.js and Git installed. The code folder is `
 **Done:**
 - Phase 1: logins and roles, clients and pipeline, auto tasks, dashboard, team management, client portal, settings, my account
 - PWA
-- Desktop builds
-- Bug-fix pass
+- Desktop apps (built by GitHub Actions)
+- Two bug-fix passes
 
-**Waiting on Shreejal:**
-1. Sign up as admin with evocartoonz@gmail.com on the live site.
-2. (Done) GitHub repo created as public, and Pages enabled with source = GitHub Actions.
-3. Give permission to set the Supabase Auth **Site URL** and redirect URLs (live URL + `http://localhost:5173`) in the dashboard through the built-in browser.
-4. Confirm whether he wants the desktop installers or the PWA only.
-5. Answer whether to import existing clients from the master posting Google Sheet (ID `1vJfnHacCixr1M-Gu1unrcViRQvobCYH9fQblJRNlyWc`, Clients tab).
+**Live since 25 Sep 2026:**
+- Website: https://anmol-curlywave.github.io/curlywave-os/
+- Desktop installers: `desktop-latest` release (Windows .exe, Mac arm64/x64 .dmg and .zip)
 
-**Next after that:**
-1. Check that the GitHub Actions runs succeed and the release downloads appear.
-2. Run a live end-to-end test on the real backend (built-in browser, and install the Windows app via computer use).
-3. Delete the QA accounts.
+**Live end-to-end test on the real backend (25 Sep): passed.**
+- **Admin:** create client, assign employee, move stage (auto tasks created, closed and reassigned), rules, tasks, activity log in IST, create employee login and client login through the `admin-users` function, dashboard delayed detection.
+- **Employee:** sees only their tasks and clients, is redirected away from admin pages, can move the stage.
+- **Client portal:** only sees `my_projects`, and the links are gated.
+- **Direct API attacks were blocked:** a client reading other tables, a client promoting themself to admin, a client calling the admin function, and anonymous access.
 
-**Known limitation:** Supabase's free email only sends to the project owner, so "Forgot password" emails won't reach employees. Admins reset passwords on the Team page. Fix later with free Gmail SMTP.
+**Done later on 25 Sep:**
+- All live-test fixes pushed to GitHub and verified by sha256:
+  - Portal "Not set yet"
+  - Dashboard "Why late" column
+  - TaskForm defaults to the client's employee
+  - hidden stepper scrollbar and narrower search box
+  - **branching pipeline buttons**: client review → "Changes requested → Revisions" or "Plan approved → Image/Video creation"; revisions → back to review or approved; final approval → changes or "Creatives approved → Posting"
+  - **Manage login** button for client logins on the Team page (opens `/employees/:id`, where you can reset the password or disable the login)
+- Supabase Auth: Site URL = `https://anmol-curlywave.github.io/curlywave-os/`. Redirect URLs = that URL + `/**` and `http://localhost:5173/**`.
+- QA test data was deleted.
+- `qa-session` edge function: disabled (returns 410). Delete it in the dashboard.
+
+**Sample data for previewing the employee and client views (safe to delete):**
+- Employee **Riya Sharma (Demo Employee)**: `demo-employee@curlywave.test`
+- Client login **Rohit Mehta (Demo Client)**: `demo-client@curlywave.test`
+- Clients **DEMO1 Sweet Crumbs Bakery (sample)**, at client review with the portal linked, and **DEMO2 FitZone Studio (sample)**, at content plan with 1 overdue task
+- The demo users have no password. To log in as them, the admin opens Team → the person → **Reset password**, then signs in in a private window.
+
+**Compliance + security pass (25 Sep, from Shreejal's checklist video + Claude's review):**
+- Public Privacy Policy, Terms of Use (incl. payments/refunds → covered by the service agreement) and Cookie Policy; cookie notice; consent at signup and first sign-in (DPDP); download my data; request deletion (admins see requests on the Team page); business details + grievance officer editable in Settings.
+- Accessibility: labelled fields, keyboard-openable rows, skip link, focus outlines, modal focus handling, AA colour contrast.
+- Review fixes: only safe http(s) links (stops `javascript:` links); confirm before role change / disable / approve; "Link existing login" for client logins; back button from creation goes to client review; stage buttons can't double-fire; admin-users function now reports every error; employees can't reassign or move tasks (0006); admin bootstrap can't be hijacked (0006).
+- Signup flow Shreejal wants: people sign up with email + password → an admin approves them as employee or client. For that to work, **Supabase → Authentication → Sign In / Providers → Email → turn OFF "Confirm email"** (the built-in email only reaches team addresses). The admin approval step is the check.
+- Not done / needs Shreejal: apply 0006; fill in business details; turn off "Confirm email"; delete the `qa-session` function (still ACTIVE); leaked-password protection needs a paid Supabase plan (skipped: free tools only); a lawyer should review the legal text.
+
+**Still open:**
+1. The Windows installer hasn't been installed on his PC. It needs him to click "More info → Run anyway" at the SmartScreen warning, which Claude must not bypass.
+2. The Mac apps haven't been tried on a real Mac.
+3. Import existing clients from the master posting Google Sheet (ID `1vJfnHacCixr1M-Gu1unrcViRQvobCYH9fQblJRNlyWc`, Clients tab)? He hasn't answered.
+4. Admin account: **anmol.curlywave@gmail.com** (Anmol Kumar), email confirmed manually. `admin_bootstrap_emails` = [anmol.curlywave@gmail.com, evocartoonz@gmail.com]. Reset emails don't arrive for non-owner addresses, so reset passwords from the Team page or ask Claude.
+
+**Files on his PC that are no longer used:** `deploy.bat`, `public/_redirects`, `public/_headers`, `public/icons/icon-1024.png`. They're safe to delete.
 
 ## 10. Roadmap
 - **Phase 2:** In-app intake form (and import of existing Google Form responses), AI research, and content plan + image prompts.

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { supabase, TASK_STATUSES, type Priority, type Profile, type Task, type TaskStatus } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { Modal } from "./ui";
+import { Field, Modal } from "./ui";
 
 export default function TaskForm({ task, clientId, onClose, onSaved }: {
   task?: Task; clientId?: string | null; onClose: () => void; onSaved: () => void;
@@ -64,30 +64,30 @@ export default function TaskForm({ task, clientId, onClose, onSaved }: {
       </>}>
       {err && <div className="alert">{err}</div>}
       <form id="task-form" onSubmit={save} className="form-grid">
-        <div className="field full"><label>Title *</label><input required value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-        <div className="field full"><label>Details</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-        <div className="field"><label>Client</label>
+        <Field label="Title *" full><input required value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+        <Field label="Details" full><textarea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+        <Field label="Client">
           <select value={client} onChange={(e) => { setClient(e.target.value); if (!task && isAdmin) { const owner = clients.find((c) => c.id === e.target.value)?.assigned_employee_id; if (owner) setAssignee(owner); } }}>
             <option value="">— Internal / no client —</option>
             {clients.map((c) => <option key={c.id} value={c.id}>#{c.client_code} {c.company_name}</option>)}
-          </select></div>
-        <div className="field"><label>Assigned to</label>
+          </select></Field>
+        <Field label="Assigned to">
           {isAdmin ? (
             <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
               <option value="">— Unassigned —</option>
               {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name || s.email}</option>)}
             </select>
           ) : <input disabled value={task && task.assignee_id !== profile?.id ? "Someone else" : "Me"} />}
-        </div>
-        <div className="field"><label>Status</label>
+        </Field>
+        <Field label="Status">
           <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
             {TASK_STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select></div>
-        <div className="field"><label>Priority</label>
+          </select></Field>
+        <Field label="Priority">
           <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
             <option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option>
-          </select></div>
-        <div className="field"><label>Due date</label><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></div>
+          </select></Field>
+        <Field label="Due date"><input type="date" value={due} onChange={(e) => setDue(e.target.value)} /></Field>
       </form>
     </Modal>
   );

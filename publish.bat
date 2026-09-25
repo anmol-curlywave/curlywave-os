@@ -8,10 +8,15 @@ if not exist .git (
   git init -b main
   git remote add origin https://github.com/anmol-curlywave/curlywave-os.git
 )
+REM Git needs a name/email for commits; set one for this folder only if none is configured.
+git config user.email >nul 2>nul || git config user.email "anmol-curlywave@users.noreply.github.com"
+git config user.name >nul 2>nul || git config user.name "anmol-curlywave"
 git fetch origin main || goto :fail
-git reset --soft origin/main
-git add -A
-git commit -m "Update from PC" || echo Nothing new to publish.
+REM Start from GitHub's copy, then add this folder's new and changed files.
+REM Files missing here are NOT deleted on GitHub, and the .github automations are never touched.
+git reset --mixed origin/main >nul
+git add --ignore-removal -- . ":(exclude).github"
+git diff --cached --quiet && (echo Nothing new to publish.) || (git commit -q -m "Update from PC" || goto :fail)
 git push origin HEAD:main || goto :fail
 echo.
 echo Done. The website updates in about 2 minutes: https://anmol-curlywave.github.io/curlywave-os/

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase, STAGES, type ClientOverview, type Workload } from "../lib/supabase";
-import { HealthBadge, Loading, Progress, StageBadge, Empty } from "../components/ui";
+import { HealthBadge, Loading, Progress, StageBadge, Empty, rowLink } from "../components/ui";
 import { byCode, daysLeftText, todayISO } from "../lib/format";
 import { useRefreshOnFocus } from "../lib/useRefresh";
 
@@ -57,7 +57,7 @@ export default function Dashboard() {
               <thead><tr><th>Client</th><th>Stage</th><th>Owner</th><th>Why late</th><th>Overdue tasks</th></tr></thead>
               <tbody>
                 {delayed.map((c) => (
-                  <tr key={c.id} className="clickable" onClick={() => nav(`/clients/${c.id}`)}>
+                  <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
                     <td><b>#{c.client_code}</b> {c.company_name}</td>
                     <td><StageBadge stage={c.stage} /></td>
                     <td>{c.employee_name ?? <span className="muted">Unassigned</span>}</td>
@@ -90,7 +90,7 @@ export default function Dashboard() {
             <thead><tr><th>Client</th><th>Stage</th><th style={{ width: 180 }}>Progress</th><th>Owner</th><th>Status</th></tr></thead>
             <tbody>
               {clients.map((c) => (
-                <tr key={c.id} className="clickable" onClick={() => nav(`/clients/${c.id}`)}>
+                <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
                   <td><b>#{c.client_code}</b> {c.company_name}</td>
                   <td><StageBadge stage={c.stage} /></td>
                   <td><div className="row"><Progress pct={c.progress_pct} tone={c.is_delayed ? "bad" : c.stage === "completed" ? "ok" : undefined} /><span className="small muted">{c.progress_pct}%</span></div></td>
@@ -110,7 +110,7 @@ export default function Dashboard() {
             <thead><tr><th>Name</th><th>Active clients</th><th>Open tasks</th><th>Overdue</th><th>Done (7 days)</th></tr></thead>
             <tbody>
               {team.map((t) => (
-                <tr key={t.id} className="clickable" onClick={() => nav(`/employees/${t.id}`)}>
+                <tr key={t.id} {...rowLink(() => nav(`/employees/${t.id}`))}>
                   <td><b>{t.full_name || t.email}</b> <span className="muted small">{t.designation}</span></td>
                   <td>{t.active_clients}</td><td>{t.open_tasks}</td>
                   <td>{t.overdue_tasks > 0 ? <span className="badge bad">{t.overdue_tasks}</span> : 0}</td>

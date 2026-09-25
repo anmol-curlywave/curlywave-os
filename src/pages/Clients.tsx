@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase, STAGES, type ClientOverview } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { Empty, HealthBadge, Loading, Progress, StageBadge } from "../components/ui";
+import { Empty, HealthBadge, Loading, Progress, StageBadge, rowLink } from "../components/ui";
 import ClientForm from "../components/ClientForm";
 import { byCode, daysLeftText } from "../lib/format";
 import { useRefreshOnFocus } from "../lib/useRefresh";
@@ -48,19 +48,19 @@ export default function Clients() {
 
       <div className="card">
         <div className="row filters mb">
-          <input className="search" placeholder="Search name, code, city…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <select value={stage} onChange={(e) => setStage(e.target.value)}>
+          <input className="search" aria-label="Search clients" type="search" placeholder="Search name, code, city…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select aria-label="Filter by stage" value={stage} onChange={(e) => setStage(e.target.value)}>
             <option value="">All stages</option>
             {STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
           {isAdmin && (
-            <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <select aria-label="Filter by owner" value={owner} onChange={(e) => setOwner(e.target.value)}>
               <option value="">All owners</option>
               <option value="__none">Unassigned</option>
               {owners.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           )}
-          <select value={health} onChange={(e) => setHealth(e.target.value)}>
+          <select aria-label="Filter by status" value={health} onChange={(e) => setHealth(e.target.value)}>
             <option value="">Any status</option>
             <option value="delayed">Delayed</option>
             <option value="ontime">On time</option>
@@ -73,7 +73,7 @@ export default function Clients() {
             <thead><tr><th>Code</th><th>Client</th><th>Stage</th><th style={{ width: 170 }}>Progress</th><th>Stage due</th>{isAdmin && <th>Owner</th>}<th>Open tasks</th><th>Status</th></tr></thead>
             <tbody>
               {filtered.map((c) => (
-                <tr key={c.id} className="clickable" onClick={() => nav(`/clients/${c.id}`)}>
+                <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
                   <td><b>#{c.client_code}</b></td>
                   <td>{c.company_name}<div className="small muted">{[c.industry, c.city].filter(Boolean).join(" · ")}</div></td>
                   <td><StageBadge stage={c.stage} /></td>

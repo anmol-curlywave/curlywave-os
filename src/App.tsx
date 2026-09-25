@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -12,9 +12,22 @@ import Settings from "./pages/Settings";
 import Portal from "./pages/Portal";
 import Account from "./pages/Account";
 import { Loading } from "./components/ui";
+import Legal, { LEGAL_PATHS } from "./pages/Legal";
+import Consent from "./pages/Consent";
+import CookieNotice from "./components/CookieNotice";
+import { CONSENT_VERSION } from "./lib/supabase";
 
 export default function App() {
+  return <><Screens /><CookieNotice /></>;
+}
+
+function Screens() {
   const { session, profile, profileError, loading, recovery, signOut, refreshProfile } = useAuth();
+  const loc = useLocation();
+
+  // Privacy, Terms and Cookie pages are public: readable signed in or not.
+  const legal = LEGAL_PATHS[loc.pathname.replace(/\/+$/, "")];
+  if (legal) return <Legal page={legal} />;
 
   if (loading) return <div className="center-screen"><Loading /></div>;
   if (!session) return <Login />;
@@ -31,6 +44,8 @@ export default function App() {
   }
   if (!profile) return <div className="center-screen"><Loading /></div>;
   if (recovery) return <Account recoveryMode />;
+  // DPDP consent: ask once (and again when the policy version changes). Skipped until migration 0006 adds the column.
+  if ("consent_version" in profile && profile.consent_version !== CONSENT_VERSION && profile.is_active) return <Consent />;
 
   if (profile.role === "pending" || !profile.is_active) {
     return (

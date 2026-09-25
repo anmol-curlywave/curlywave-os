@@ -46,15 +46,17 @@ Deno.serve(async (req) => {
       });
       if (error) return json({ error: error.message }, 400);
 
-      await admin.from("profiles").update({
+      const { error: pErr } = await admin.from("profiles").update({
         role, full_name,
         designation: body.designation ? String(body.designation) : null,
         phone: body.phone ? String(body.phone) : null,
       }).eq("id", data.user.id);
+      if (pErr) return json({ error: `Login created, but saving the profile failed: ${pErr.message}`, user_id: data.user.id }, 500);
 
       // Optionally link a client portal login to a client record.
       if (role === "client" && body.client_id) {
-        await admin.from("clients").update({ portal_user_id: data.user.id }).eq("id", String(body.client_id));
+        const { error: lErr } = await admin.from("clients").update({ portal_user_id: data.user.id }).eq("id", String(body.client_id));
+        if (lErr) return json({ error: `Login created, but linking it to the client failed: ${lErr.message}. Use "Link existing login".`, user_id: data.user.id }, 500);
       }
       return json({ ok: true, user_id: data.user.id });
     }
@@ -67,15 +69,18 @@ Deno.serve(async (req) => {
         return json({ error: "You cannot change your own role or deactivate yourself" }, 400);
       }
       const patch: Record<string, unknown> = {};
+      if (Object.keys(body).filter((k) => !["action", "user_id"].includes(k)).length === 0) return json({ error: "Nothing to update" }, 400);
       for (const k of ["full_name", "designation", "phone"]) if (body[k] !== undefined) patch[k] = body[k];
       if (body.role !== undefined) {
         if (!ROLES.includes(String(body.role))) return json({ error: "Invalid role" }, 400);
         patch.role = body.role;
-        await admin.auth.admin.updateUserById(userId, { app_metadata: { role: body.role } });
+        const { error: rErr } = await admin.auth.admin.updateUserById(userId, { app_metadata: { role: body.role } });
+        if (rErr) return json({ error: rErr.message }, 400);
       }
       if (body.is_active !== undefined) {
         patch.is_active = !!body.is_active;
-        await admin.auth.admin.updateUserById(userId, { ban_duration: body.is_active ? "none" : "876000h" });
+        const { error: bErr } = await admin.auth.admin.updateUserById(userId, { ban_duration: body.is_active ? "none" : "876000h" });
+        if (bErr) return json({ error: `Could not ${body.is_active ? "enable" : "disable"} the login: ${bErr.message}` }, 400);
       }
       const { error } = await admin.from("profiles").update(patch).eq("id", userId);
       if (error) return json({ error: error.message }, 400);

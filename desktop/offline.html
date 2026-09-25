@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+<title>Curlywave OS — offline</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: #f6f6fb; color: #1b1a2e; padding: 16px; }
+  @media (prefers-color-scheme: dark) { body { background: #111019; color: #ecebf5; } .card { background: #1a1926 !important; border-color: #2f2d44 !important; } }
+  .card { background: #fff; border: 1px solid #e4e2ef; border-radius: 14px; padding: 28px; max-width: 380px; text-align: center; }
+  button { background: #5b3df5; color: #fff; border: 0; border-radius: 9px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  p.small { font-size: 12px; color: #6b6985; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>You're offline</h2>
+    <p>Curlywave OS needs an internet connection to load your clients and tasks.</p>
+    <button id="retry">Try again</button>
+    <p class="small">We'll reconnect automatically when your internet is back.</p>
+  </div>
+<script>
+  var target = new URLSearchParams(location.search).get("url");
+  function go() { if (target && /^https:\/\//.test(target)) location.href = target; else location.reload(); }
+  document.getElementById("retry").onclick = go;
+  window.addEventListener("online", go);
+  setInterval(function () { if (navigator.onLine) go(); }, 15000);
+</script>
+</body>
+</html>

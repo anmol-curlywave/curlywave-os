@@ -52,7 +52,7 @@ export default function Portal() {
           <div className="alert info mt">{WHAT_NEXT[p.stage]}</div>
           <dl className="kv">
             <dt>Account manager</dt><dd>{p.account_manager ?? "—"}</dd>
-            <dt>Plan period</dt><dd>{fmtDate(p.plan_start)} – {fmtDate(p.plan_end)}</dd>
+            <dt>Plan period</dt><dd>{p.plan_start || p.plan_end ? `${fmtDate(p.plan_start)} – ${fmtDate(p.plan_end)}` : "Not set yet"}</dd>
             <dt>Content plan</dt><dd>{p.content_plan_url ? <a href={p.content_plan_url} target="_blank" rel="noreferrer">Open content plan</a> : "Not shared yet"}</dd>
             <dt>Creatives folder</dt><dd>{p.drive_folder_url ? <a href={p.drive_folder_url} target="_blank" rel="noreferrer">Open Google Drive folder</a> : "Not shared yet"}</dd>
           </dl>

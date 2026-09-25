@@ -13,6 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unpack and verify
+        id: unpack
         if: ${{ hashFiles('bootstrap/bundle.b64') != '' && hashFiles('bootstrap/bundle.sha256') != '' }}
         run: |
           tr -d ' \r\n' < bootstrap/bundle.b64 | base64 -d > /tmp/bundle.tgz
@@ -24,8 +25,9 @@ jobs:
           git add -A
           git commit -m "Import Curlywave OS source"
           git push
+          echo "done=true" >> "$GITHUB_OUTPUT"
       - name: Start deploy and desktop builds
-        if: ${{ hashFiles('bootstrap/bundle.b64') != '' && hashFiles('bootstrap/bundle.sha256') != '' }}
+        if: steps.unpack.outputs.done == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -16,15 +16,23 @@ export default function TaskForm({ task, clientId, onClose, onSaved }: {
   const [due, setDue] = useState(task?.due_date ?? "");
   const [client, setClient] = useState(task?.client_id ?? clientId ?? "");
   const [staff, setStaff] = useState<Profile[]>([]);
-  const [clients, setClients] = useState<{ id: string; client_code: string; company_name: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; client_code: string; company_name: string; assigned_employee_id: string | null }[]>([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (isAdmin) supabase.from("profiles").select("*").in("role", ["admin", "employee"]).eq("is_active", true).order("full_name")
       .then(({ data }) => setStaff((data as Profile[]) ?? []));
-    supabase.from("clients").select("id,client_code,company_name").order("client_code").then(({ data }) => setClients(data ?? []));
-  }, [isAdmin]);
+    supabase.from("clients").select("id,client_code,company_name,assigned_employee_id").then(({ data }) => {
+      const list = (data ?? []).sort((a, b) => a.client_code.localeCompare(b.client_code, undefined, { numeric: true }));
+      setClients(list);
+      // A new task on a client goes to that client's employee by default.
+      if (!task && isAdmin && clientId) {
+        const owner = list.find((c) => c.id === clientId)?.assigned_employee_id;
+        if (owner) setAssignee(owner);
+      }
+    });
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -59,7 +67,7 @@ export default function TaskForm({ task, clientId, onClose, onSaved }: {
         <div className="field full"><label>Title *</label><input required value={title} onChange={(e) => setTitle(e.target.value)} /></div>
         <div className="field full"><label>Details</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <div className="field"><label>Client</label>
-          <select value={client} onChange={(e) => setClient(e.target.value)}>
+          <select value={client} onChange={(e) => { setClient(e.target.value); if (!task && isAdmin) { const owner = clients.find((c) => c.id === e.target.value)?.assigned_employee_id; if (owner) setAssignee(owner); } }}>
             <option value="">— Internal / no client —</option>
             {clients.map((c) => <option key={c.id} value={c.id}>#{c.client_code} {c.company_name}</option>)}
           </select></div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { supabase, STAGES, type ClientOverview, type Profile, type Stage, type Task, adminUsers } from "../lib/supabase";
+import { supabase, STAGES, stageLabel, type ClientOverview, type Profile, type Stage, type Task, adminUsers } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { HealthBadge, Loading, Modal, Progress, StageBadge, Stepper, Empty } from "../components/ui";
 import ClientForm from "../components/ClientForm";
@@ -55,7 +55,7 @@ export default function ClientDetail() {
 
   const idx = STAGES.findIndex((s) => s.key === c.stage);
   const prev = STAGES[idx - 1];
-  const next = STAGES[idx + 1];
+  const actions = nextActions(c.stage, STAGES[idx + 1]?.key);
   const openTasks = tasks.filter((t) => t.status !== "done");
 
   return (
@@ -82,7 +82,9 @@ export default function ClientDetail() {
           <h2>Pipeline</h2>
           <div className="row">
             {prev && <button className="btn sm" onClick={() => moveStage(prev.key)}>← {prev.label}</button>}
-            {next && <button className="btn sm primary" onClick={() => moveStage(next.key)}>Move to {next.label} →</button>}
+            {actions.map((a) => (
+              <button key={a.to} className={`btn sm ${a.primary ? "primary" : ""}`} onClick={() => moveStage(a.to)}>{a.label}</button>
+            ))}
           </div>
         </div>
         <Stepper stage={c.stage} />
@@ -285,4 +287,27 @@ function PortalLogin({ client, names, onChanged }: { client: ClientOverview; nam
       )}
     </div>
   );
+}
+
+/** Review stages branch: the client either approves or asks for changes. Other stages just move forward. */
+function nextActions(stage: Stage, next: Stage | undefined): { label: string; to: Stage; primary: boolean }[] {
+  switch (stage) {
+    case "client_review":
+      return [
+        { label: "Changes requested → Revisions", to: "revisions", primary: false },
+        { label: "Plan approved → Image/Video creation", to: "generation", primary: true },
+      ];
+    case "revisions":
+      return [
+        { label: "Send back for client review", to: "client_review", primary: false },
+        { label: "Approved → Image/Video creation", to: "generation", primary: true },
+      ];
+    case "final_approval":
+      return [
+        { label: "Changes requested → back to creation", to: "generation", primary: false },
+        { label: "Creatives approved → Posting", to: "posting", primary: true },
+      ];
+    default:
+      return next ? [{ label: `Move to ${stageLabel(next)} →`, to: next, primary: true }] : [];
+  }
 }

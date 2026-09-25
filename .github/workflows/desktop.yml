@@ -1,0 +1,54 @@
+name: Build desktop apps
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["desktop/**"]
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Point the app at the live website
+        run: |
+          OWNER="${{ github.repository_owner }}"; OWNER="${OWNER,,}"; REPO="${{ github.event.repository.name }}"
+          if [[ "$REPO" == *.github.io ]]; then URL="https://$REPO/"; else URL="https://$OWNER.github.io/$REPO/"; fi
+          echo "{ \"appUrl\": \"$URL\" }" > config.json
+          mkdir -p build && cp ../public/icons/icon-512.png build/icon.png
+          cat config.json
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --x64 --publish never
+      - name: Build Mac apps (Intel + Apple Silicon)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac dmg zip --x64 --arm64 --publish never -c.mac.identity=-
+      - name: Publish to the "Desktop apps" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: Curlywave OS desktop apps
+          body: |
+            **Windows:** download `Curlywave-OS-Setup-*.exe` → run it (first time: *More info → Run anyway*).
+            **Mac (Apple Silicon M1/M2/M3/M4):** `*-arm64.dmg` · **Mac (Intel):** `*-x64.dmg` → drag to Applications → first time: right-click the app → **Open**.
+            The apps open the live Curlywave OS website, so they update automatically.
+          files: |
+            desktop/release/*.exe
+            desktop/release/*.dmg
+            desktop/release/*.zip
+          make_latest: true

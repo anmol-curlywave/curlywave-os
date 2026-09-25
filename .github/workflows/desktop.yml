@@ -27,7 +27,7 @@ jobs:
       - run: npm ci
       - name: Point the app at the live website
         run: |
-          OWNER="${{ github.repository_owner }}"; OWNER="${OWNER,,}"; REPO="${{ github.event.repository.name }}"
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'); REPO="${{ github.event.repository.name }}"
           if [[ "$REPO" == *.github.io ]]; then URL="https://$REPO/"; else URL="https://$OWNER.github.io/$REPO/"; fi
           echo "{ \"appUrl\": \"$URL\" }" > config.json
           mkdir -p build && cp ../public/icons/icon-512.png build/icon.png

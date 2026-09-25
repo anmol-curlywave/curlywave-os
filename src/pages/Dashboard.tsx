@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase, STAGES, type ClientOverview, type Workload } from "../lib/supabase";
 import { HealthBadge, Loading, Progress, StageBadge, Empty } from "../components/ui";
-import { byCode, daysLeftText } from "../lib/format";
+import { byCode, daysLeftText, todayISO } from "../lib/format";
 import { useRefreshOnFocus } from "../lib/useRefresh";
 
 export default function Dashboard() {
@@ -54,14 +54,14 @@ export default function Dashboard() {
           <div className="card-head"><h2>Delayed clients</h2><span className="badge bad">{delayed.length}</span></div>
           {delayed.length === 0 ? <Empty>Nothing is running late. 🎉</Empty> : (
             <div className="table-wrap"><table>
-              <thead><tr><th>Client</th><th>Stage</th><th>Owner</th><th>Due</th><th>Overdue tasks</th></tr></thead>
+              <thead><tr><th>Client</th><th>Stage</th><th>Owner</th><th>Why late</th><th>Overdue tasks</th></tr></thead>
               <tbody>
                 {delayed.map((c) => (
                   <tr key={c.id} className="clickable" onClick={() => nav(`/clients/${c.id}`)}>
                     <td><b>#{c.client_code}</b> {c.company_name}</td>
                     <td><StageBadge stage={c.stage} /></td>
                     <td>{c.employee_name ?? <span className="muted">Unassigned</span>}</td>
-                    <td><span className="badge bad">{daysLeftText(c.days_left)}</span></td>
+                    <td><span className="badge bad">{lateReason(c)}</span></td>
                     <td>{c.overdue_tasks}</td>
                   </tr>
                 ))}
@@ -123,4 +123,11 @@ export default function Dashboard() {
       </div>
     </>
   );
+}
+
+function lateReason(c: ClientOverview) {
+  if (c.days_left !== null && c.days_left < 0) return `Stage ${daysLeftText(c.days_left)}`;
+  if (c.plan_end && c.plan_end < todayISO()) return "Plan deadline passed";
+  if (c.overdue_tasks > 0) return c.overdue_tasks === 1 ? "1 task overdue" : `${c.overdue_tasks} tasks overdue`;
+  return "Late";
 }

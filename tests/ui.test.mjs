@@ -73,7 +73,7 @@ for (const vp of Object.keys(VIEWPORTS)) {
   await page.goto(BASE + "/clients");
   await page.getByText("Tiwari Motors").first().waitFor();
   ok(!(await page.getByText("Done Co").count()), "employee does not see other employees' clients");
-  ok(!(await page.getByRole("button", { name: "+ New client" }).count()), "employee has no New client button");
+  ok(!(await page.getByRole("button", { name: "New client" }).count()), "employee has no New client button");
   await ctx.close();
 }
 {
@@ -134,7 +134,7 @@ for (const vp of Object.keys(VIEWPORTS)) {
   ok(await page.locator("tbody tr").count() === 1, "search works");
   await page.getByPlaceholder("Search name, code, city…").fill("");
   // new client — duplicate code error
-  await page.getByRole("button", { name: "+ New client" }).click();
+  await page.getByRole("button", { name: "New client" }).click();
   await page.getByPlaceholder("e.g. 294").fill("37");
   await page.locator('form#client-form input[required]').nth(1).fill("Dup");
   await page.getByRole("button", { name: "Save" }).click();
@@ -156,7 +156,7 @@ for (const vp of Object.keys(VIEWPORTS)) {
   await page.waitForTimeout(500);
   ok(store.client_rules.some((r) => r.rule === "No festival posts"), "rule added");
   await page.getByRole("tab", { name: /^Tasks/ }).click();
-  await page.getByRole("button", { name: "+ Add task" }).click();
+  await page.getByRole("button", { name: "Add task" }).click();
   await page.locator("form#task-form input[required]").fill("Call client about logo");
   await page.getByRole("button", { name: "Save" }).click();
   await page.waitForTimeout(600);
@@ -183,7 +183,7 @@ for (const vp of Object.keys(VIEWPORTS)) {
   await page.getByText("Waiting for approval").waitFor();
   await page.getByRole("button", { name: "Approve as employee" }).click();
   await page.getByText("is now an employee").waitFor({ timeout: 5000 }).then(() => ok(true, "approve pending"), () => ok(false, "approve pending"));
-  await page.getByRole("button", { name: "+ Add team member" }).click();
+  await page.getByRole("button", { name: "Add team member" }).click();
   await page.locator("form#member-form input").nth(0).fill("Test Person");
   await page.locator("form#member-form input").nth(1).fill("tp@test.in");
   await page.getByRole("button", { name: "Create login" }).click();
@@ -214,7 +214,7 @@ for (const vp of Object.keys(VIEWPORTS)) {
   ok(await page.locator(".sidebar.open").count() === 1, "mobile menu opens");
   await page.locator(".backdrop").click({ position: { x: 370, y: 400 } });
   ok(await page.locator(".sidebar.open").count() === 0, "mobile menu closes on backdrop");
-  await page.getByRole("button", { name: "+ New task" }).click();
+  await page.getByRole("button", { name: "New task" }).click();
   await page.locator("form#task-form input[required]").fill("My own task");
   await page.getByRole("button", { name: "Save" }).click();
   await page.waitForTimeout(600);
@@ -385,10 +385,10 @@ for (const vp of ["desktop", "mobile"]) {
     const bad = await unlabeled(page);
     ok(bad.length === 0, `${path} all fields labelled ${bad.join(" ")}`);
   }
-  await page.goto(BASE + "/tasks"); await page.getByRole("button", { name: "+ New task" }).click();
+  await page.goto(BASE + "/tasks"); await page.getByRole("button", { name: "New task" }).click();
   ok((await unlabeled(page)).length === 0, "task form labelled");
   await page.keyboard.press("Escape");
-  await page.goto(BASE + "/employees"); await page.getByRole("button", { name: "+ Add team member" }).click();
+  await page.goto(BASE + "/employees"); await page.getByRole("button", { name: "Add team member" }).click();
   ok((await unlabeled(page)).length === 0, "member form labelled");
   await page.keyboard.press("Escape");
   // Business details editable

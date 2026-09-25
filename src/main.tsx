@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./lib/auth";
+import "@fontsource-variable/inter";
 import "./styles.css";
 import { registerSW } from "./lib/pwa";
 

@@ -28,7 +28,7 @@ intake form → AI research → content plan + image prompts → client review �
 ## 3. Stack (all free tier)
 | Part | Tool | Notes |
 |---|---|---|
-| Frontend | React 18 + Vite + TypeScript, plain CSS | Only 4 runtime deps: react, react-dom, react-router-dom, @supabase/supabase-js |
+| Frontend | React 18 + Vite + TypeScript, plain CSS | 5 runtime deps: react, react-dom, react-router-dom, @supabase/supabase-js, @fontsource-variable/inter (self-hosted font). Icons are inlined Lucide SVGs in `components/Icon.tsx` (no icon library) |
 | Backend | **Supabase** project `curlywave-os` | ref `dwwpxzewdmrnwpulkrwz`, region ap-south-1 (Mumbai), org `baeryfnoramginanirzp` |
 | API URL | https://dwwpxzewdmrnwpulkrwz.supabase.co | Publishable key is in `src/config.ts` (public by design; RLS protects data) |
 | Hosting | **GitHub Pages**, repo **github.com/anmol-curlywave/curlywave-os** (public) | Live: **https://anmol-curlywave.github.io/curlywave-os/**. Every push to `main` rebuilds through GitHub Actions (`deploy.yml`) |
@@ -184,6 +184,8 @@ His PC ("anmol-pc", Windows) has Node.js and Git installed. The code folder is `
 - Review fixes: only safe http(s) links (stops `javascript:` links); confirm before role change / disable / approve; "Link existing login" for client logins; back button from creation goes to client review; stage buttons can't double-fire; admin-users function now reports every error; employees can't reassign or move tasks (0006); admin bootstrap can't be hijacked (0006).
 - Signup flow Shreejal wants: people sign up with email + password → an admin approves them as employee or client. For that to work, **Supabase → Authentication → Sign In / Providers → Email → turn OFF "Confirm email"** (the built-in email only reaches team addresses). The admin approval step is the check.
 - Not done / needs Shreejal: apply 0006; fill in business details; turn off "Confirm email"; delete the `qa-session` function (still ACTIVE); leaked-password protection needs a paid Supabase plan (skipped: free tools only); a lawyer should review the legal text.
+
+**UI refresh (25 Sep):** style "clean light admin + soft cards" (Shopify-like layout, Runey-like cards), picked by Claude. Inter font, Lucide icons, light sidebar with white active item, KPI tiles with coloured icons (`Kpi`), initials avatars (`Avatar`), rounded tables, stage bars on the dashboard, greeting header, 2-column KPIs on phones. Purple brand kept; dark mode kept. Also fixed: the page no longer reloads itself on the very first visit (service worker install).
 
 **Still open:**
 1. The Windows installer hasn't been installed on his PC. It needs him to click "More info → Run anyway" at the SmartScreen warning, which Claude must not bypass.

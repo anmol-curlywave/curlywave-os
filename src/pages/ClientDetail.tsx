@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase, STAGES, stageLabel, type ClientOverview, type Profile, type Stage, type Task, adminUsers } from "../lib/supabase";
+import Icon from "../components/Icon";
 import { useAuth } from "../lib/auth";
 import { ExtLink, Field, HealthBadge, Loading, Modal, Progress, StageBadge, Stepper, Empty } from "../components/ui";
 import ClientForm from "../components/ClientForm";
@@ -144,7 +145,7 @@ export default function ClientDetail() {
 
       {tab === "tasks" && (
         <div className="card">
-          <div className="card-head"><h2>Tasks</h2><button className="btn primary sm" onClick={() => setTaskModal("new")}>+ Add task</button></div>
+          <div className="card-head"><h2>Tasks</h2><button className="btn primary sm" onClick={() => setTaskModal("new")}><Icon name="plus" size={15} />Add task</button></div>
           <TaskTable tasks={tasks} names={names} hideClient onEdit={(t) => setTaskModal(t)} onChanged={load} />
         </div>
       )}

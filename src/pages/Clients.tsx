@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase, STAGES, type ClientOverview } from "../lib/supabase";
+import Icon from "../components/Icon";
 import { useAuth } from "../lib/auth";
-import { Empty, HealthBadge, Loading, Progress, StageBadge, rowLink } from "../components/ui";
+import { Avatar, Empty, HealthBadge, Loading, Progress, StageBadge, rowLink } from "../components/ui";
 import ClientForm from "../components/ClientForm";
 import { byCode, daysLeftText } from "../lib/format";
 import { useRefreshOnFocus } from "../lib/useRefresh";
@@ -43,7 +44,7 @@ export default function Clients() {
     <>
       <div className="page-head">
         <div><h1>{isAdmin ? "Clients" : "My clients"}</h1><p>{filtered.length} of {rows.length} clients</p></div>
-        {isAdmin && <button className="btn primary" onClick={() => setParams({ new: "1" })}>+ New client</button>}
+        {isAdmin && <button className="btn primary" onClick={() => setParams({ new: "1" })}><Icon name="plus" size={16} />New client</button>}
       </div>
 
       <div className="card">
@@ -75,11 +76,11 @@ export default function Clients() {
               {filtered.map((c) => (
                 <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
                   <td><b>#{c.client_code}</b></td>
-                  <td>{c.company_name}<div className="small muted">{[c.industry, c.city].filter(Boolean).join(" · ")}</div></td>
+                  <td className="name-cell">{c.company_name}<div className="small muted">{[c.industry, c.city].filter(Boolean).join(" · ")}</div></td>
                   <td><StageBadge stage={c.stage} /></td>
                   <td><div className="row"><Progress pct={c.progress_pct} tone={c.is_delayed ? "bad" : c.stage === "completed" ? "ok" : undefined} /><span className="small muted">{c.progress_pct}%</span></div></td>
                   <td className={c.days_left !== null && c.days_left < 0 ? "" : "muted"}>{daysLeftText(c.days_left)}</td>
-                  {isAdmin && <td>{c.employee_name ?? <span className="muted">—</span>}</td>}
+                  {isAdmin && <td>{c.employee_name ? <span className="person"><Avatar name={c.employee_name} size={24} />{c.employee_name}</span> : <span className="muted">—</span>}</td>}
                   <td>{c.open_tasks}{c.overdue_tasks > 0 && <span className="badge bad" style={{ marginLeft: 6 }}>{c.overdue_tasks} late</span>}</td>
                   <td><HealthBadge delayed={c.is_delayed} onHold={c.is_on_hold} completed={c.stage === "completed"} /></td>
                 </tr>

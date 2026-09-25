@@ -26,8 +26,10 @@ export function applyUpdate() {
 export function registerSW() {
   if (!("serviceWorker" in navigator) || !import.meta.env.PROD) return;
   let reloading = false;
+  // Only reload when an existing version is replaced — not on the very first install.
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloading) return;
+    if (reloading || !hadController) return;
     reloading = true;
     location.reload();
   });

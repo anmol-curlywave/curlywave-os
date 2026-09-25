@@ -1,7 +1,8 @@
+import Icon from "../components/Icon";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, adminUsers, type Profile, type Workload } from "../lib/supabase";
-import { Empty, Field, Loading, Modal, rowLink } from "../components/ui";
+import { Avatar, Empty, Field, Loading, Modal, rowLink } from "../components/ui";
 import { randomPassword } from "../lib/format";
 
 export default function Employees() {
@@ -39,7 +40,7 @@ export default function Employees() {
     <>
       <div className="page-head">
         <div><h1>Team</h1><p>Who is working on what, and what's slipping.</p></div>
-        <button className="btn primary" onClick={() => setAdding(true)}>+ Add team member</button>
+        <button className="btn primary" onClick={() => setAdding(true)}><Icon name="plus" size={16} />Add team member</button>
       </div>
       {msg && <div className={`alert ${msg.ok ? "ok" : ""}`}>{msg.text}</div>}
 
@@ -81,7 +82,7 @@ export default function Employees() {
             <tbody>
               {team.map((t) => (
                 <tr key={t.id} {...rowLink(() => nav(`/employees/${t.id}`))}>
-                  <td><b>{t.full_name || t.email}</b><div className="small muted">{t.designation ?? t.email}</div></td>
+                  <td><span className="person"><Avatar name={t.full_name || t.email} size={32} /><span><b>{t.full_name || t.email}</b><div className="small muted">{t.designation ?? t.email}</div></span></span></td>
                   <td style={{ textTransform: "capitalize" }}>{t.role}</td>
                   <td>{t.active_clients}</td>
                   <td>{t.open_tasks}</td>

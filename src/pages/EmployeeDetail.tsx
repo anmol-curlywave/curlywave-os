@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase, adminUsers, type ClientOverview, type Profile, type Task, type Workload } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { Empty, HealthBadge, Loading, Progress, StageBadge, rowLink } from "../components/ui";
+import { Avatar, Empty, HealthBadge, Kpi, Loading, Progress, StageBadge, rowLink } from "../components/ui";
 import TaskTable from "../components/TaskTable";
 import TaskForm from "../components/TaskForm";
 import { byCode, byTaskPriority, fmtDateTime, randomPassword } from "../lib/format";
@@ -54,7 +54,7 @@ export default function EmployeeDetail() {
       <div className="page-head">
         <div>
           <div className="small muted"><Link to="/employees">Team</Link> / {p.full_name || p.email}</div>
-          <h1>{p.full_name || p.email}</h1>
+          <h1 className="person" style={{ gap: 12 }}><Avatar name={p.full_name || p.email} size={40} />{p.full_name || p.email}</h1>
           <p>{p.designation ?? "—"} · {p.email}{p.phone ? ` · ${p.phone}` : ""}</p>
         </div>
         {!self && (
@@ -97,11 +97,11 @@ export default function EmployeeDetail() {
 
       {w && (
         <div className="grid kpis mb">
-          <div className="card kpi"><div className="label">Active clients</div><div className="value">{w.active_clients}</div></div>
-          <div className="card kpi"><div className="label">Open tasks</div><div className="value">{w.open_tasks}</div></div>
-          <div className="card kpi"><div className="label">In progress</div><div className="value">{w.in_progress_tasks}</div></div>
-          <div className="card kpi bad"><div className="label">Overdue tasks</div><div className="value">{w.overdue_tasks}</div></div>
-          <div className="card kpi ok"><div className="label">Done (7 days)</div><div className="value">{w.done_last_7d}</div></div>
+          <Kpi icon="clients" label="Active clients" value={w.active_clients} />
+          <Kpi icon="list" label="Open tasks" value={w.open_tasks} />
+          <Kpi icon="trend" tone="info" label="In progress" value={w.in_progress_tasks} />
+          <Kpi icon="alert" tone="bad" label="Overdue tasks" value={w.overdue_tasks} />
+          <Kpi icon="check" tone="ok" label="Done (7 days)" value={w.done_last_7d} />
         </div>
       )}
 

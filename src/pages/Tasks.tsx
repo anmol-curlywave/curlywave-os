@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, TASK_STATUSES, type Profile, type Task, type TaskStatus } from "../lib/supabase";
+import Icon from "../components/Icon";
 import { useAuth } from "../lib/auth";
-import { Loading, PriorityBadge } from "../components/ui";
+import { Kpi, Loading, PriorityBadge } from "../components/ui";
 import TaskForm from "../components/TaskForm";
 import TaskTable from "../components/TaskTable";
 import { byTaskPriority, fmtDate, isOverdue, todayISO } from "../lib/format";
@@ -64,15 +65,15 @@ export default function Tasks({ mine = false }: { mine?: boolean }) {
     <>
       <div className="page-head">
         <div><h1>{mine ? "My tasks" : "Tasks"}</h1><p>{mine ? `Hi ${profile?.full_name?.split(" ")[0] || "there"} — here's your work.` : "Every task across the team."}</p></div>
-        <button className="btn primary" onClick={() => setModal("new")}>+ New task</button>
+        <button className="btn primary" onClick={() => setModal("new")}><Icon name="plus" size={16} />New task</button>
       </div>
 
       {mine && (
         <div className="grid kpis mb">
-          <div className="card kpi"><div className="label">Open</div><div className="value">{stats.open}</div></div>
-          <div className="card kpi"><div className="label">Due today</div><div className="value">{stats.today}</div></div>
-          <div className="card kpi bad"><div className="label">Overdue</div><div className="value">{stats.late}</div></div>
-          <div className="card kpi"><div className="label">Blocked</div><div className="value">{stats.blocked}</div></div>
+          <Kpi icon="list" label="Open" value={stats.open} />
+          <Kpi icon="clock" tone="warn" label="Due today" value={stats.today} />
+          <Kpi icon="alert" tone="bad" label="Overdue" value={stats.late} />
+          <Kpi icon="ban" tone="info" label="Blocked" value={stats.blocked} />
         </div>
       )}
 

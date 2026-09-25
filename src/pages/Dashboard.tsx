@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase, STAGES, type ClientOverview, type Workload } from "../lib/supabase";
-import { HealthBadge, Loading, Progress, StageBadge, Empty, rowLink } from "../components/ui";
+import { Avatar, HealthBadge, Kpi, Loading, Progress, StageBadge, Empty, rowLink } from "../components/ui";
+import Icon from "../components/Icon";
+import { useAuth } from "../lib/auth";
 import { byCode, daysLeftText, todayISO } from "../lib/format";
 import { useRefreshOnFocus } from "../lib/useRefresh";
 
@@ -9,6 +11,7 @@ export default function Dashboard() {
   const [clients, setClients] = useState<ClientOverview[] | null>(null);
   const [team, setTeam] = useState<Workload[]>([]);
   const nav = useNavigate();
+  const { profile } = useAuth();
 
   const load = useCallback(() => {
     supabase.from("client_overview").select("*").then(({ data }) => setClients(((data as ClientOverview[]) ?? []).sort(byCode)));
@@ -37,22 +40,26 @@ export default function Dashboard() {
   return (
     <>
       <div className="page-head">
-        <div><h1>Dashboard</h1><p>Every client's progress, and who's running late.</p></div>
-        <Link className="btn primary" to="/clients?new=1">+ New client</Link>
+        <div>
+          <div className="eyebrow">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</div>
+          <h1>{greeting()}{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}</h1>
+          <p>Every client's progress, and who's running late.</p>
+        </div>
+        <Link className="btn primary" to="/clients?new=1"><Icon name="plus" size={16} />New client</Link>
       </div>
 
       <div className="grid kpis mb">
-        <div className="card kpi"><div className="label">Active clients</div><div className="value">{stats.active}</div></div>
-        <div className="card kpi ok"><div className="label">On time</div><div className="value">{stats.onTime}</div></div>
-        <div className="card kpi bad"><div className="label">Delayed</div><div className="value">{stats.delayed}</div></div>
-        <div className="card kpi"><div className="label">Waiting on client</div><div className="value">{stats.awaiting}</div></div>
-        <div className="card kpi"><div className="label">Avg. progress</div><div className="value">{stats.avg}%</div></div>
+        <Kpi icon="clients" label="Active clients" value={stats.active} hint={`${clients.length - stats.active} completed`} />
+        <Kpi icon="check" tone="ok" label="On time" value={stats.onTime} hint={stats.active ? `${Math.round((stats.onTime / stats.active) * 100)}% of active` : "—"} />
+        <Kpi icon="alert" tone="bad" label="Delayed" value={stats.delayed} hint={stats.delayed ? "Needs attention" : "All good"} />
+        <Kpi icon="clock" tone="warn" label="Waiting on client" value={stats.awaiting} hint="Review or approval" />
+        <Kpi icon="trend" tone="info" label="Avg. progress" value={`${stats.avg}%`} hint={<Progress pct={stats.avg} />} />
       </div>
 
       <div className="grid side">
         <div className="card">
           <div className="card-head"><h2>Delayed clients</h2><span className="badge bad">{delayed.length}</span></div>
-          {delayed.length === 0 ? <Empty>Nothing is running late. 🎉</Empty> : (
+          {delayed.length === 0 ? <Empty>Nothing is running late.</Empty> : (
             <div className="table-wrap"><table>
               <thead><tr><th>Client</th><th>Stage</th><th>Owner</th><th>Why late</th><th>Overdue tasks</th></tr></thead>
               <tbody>
@@ -60,7 +67,7 @@ export default function Dashboard() {
                   <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
                     <td><b>#{c.client_code}</b> {c.company_name}</td>
                     <td><StageBadge stage={c.stage} /></td>
-                    <td>{c.employee_name ?? <span className="muted">Unassigned</span>}</td>
+                    <td>{c.employee_name ? <span className="person"><Avatar name={c.employee_name} size={24} />{c.employee_name}</span> : <span className="muted">Unassigned</span>}</td>
                     <td><span className="badge bad">{lateReason(c)}</span></td>
                     <td>{c.overdue_tasks}</td>
                   </tr>
@@ -71,15 +78,16 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h2 className="mb">Clients by stage</h2>
-          {stats.byStage.map((s) => (
-            <div key={s.key} style={{ marginBottom: 10 }}>
-              <div className="row small" style={{ justifyContent: "space-between", marginBottom: 4 }}>
-                <span>{s.label}</span><b>{s.count}</b>
+          <div className="card-head"><h2>Clients by stage</h2><span className="muted small">{clients.length} total</span></div>
+          <div className="stage-bars">
+            {stats.byStage.map((s) => (
+              <div key={s.key} className={`stage-bar ${s.count ? "" : "zero"}`}>
+                <span className="lbl">{s.label}</span>
+                <span className="track"><span style={{ width: `${(s.count / maxStage) * 100}%` }} className={s.key === "completed" ? "ok" : ""} /></span>
+                <b>{s.count}</b>
               </div>
-              <Progress pct={(s.count / maxStage) * 100} tone={s.key === "completed" ? "ok" : undefined} />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -94,7 +102,7 @@ export default function Dashboard() {
                   <td><b>#{c.client_code}</b> {c.company_name}</td>
                   <td><StageBadge stage={c.stage} /></td>
                   <td><div className="row"><Progress pct={c.progress_pct} tone={c.is_delayed ? "bad" : c.stage === "completed" ? "ok" : undefined} /><span className="small muted">{c.progress_pct}%</span></div></td>
-                  <td>{c.employee_name ?? <span className="muted">—</span>}</td>
+                  <td>{c.employee_name ? <span className="person"><Avatar name={c.employee_name} size={24} />{c.employee_name}</span> : <span className="muted">—</span>}</td>
                   <td><HealthBadge delayed={c.is_delayed} onHold={c.is_on_hold} completed={c.stage === "completed"} /></td>
                 </tr>
               ))}
@@ -111,7 +119,7 @@ export default function Dashboard() {
             <tbody>
               {team.map((t) => (
                 <tr key={t.id} {...rowLink(() => nav(`/employees/${t.id}`))}>
-                  <td><b>{t.full_name || t.email}</b> <span className="muted small">{t.designation}</span></td>
+                  <td><span className="person"><Avatar name={t.full_name || t.email} size={28} /><span><b>{t.full_name || t.email}</b><div className="muted small">{t.designation}</div></span></span></td>
                   <td>{t.active_clients}</td><td>{t.open_tasks}</td>
                   <td>{t.overdue_tasks > 0 ? <span className="badge bad">{t.overdue_tasks}</span> : 0}</td>
                   <td>{t.done_last_7d}</td>
@@ -123,6 +131,11 @@ export default function Dashboard() {
       </div>
     </>
   );
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 function lateReason(c: ClientOverview) {

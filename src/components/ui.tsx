@@ -1,5 +1,6 @@
 import { cloneElement, isValidElement, useEffect, useId, useRef, type ReactElement, type ReactNode } from "react";
 import { safeUrl } from "../lib/format";
+import Icon, { type IconName } from "./Icon";
 import { STAGES, type Stage, type TaskStatus, type Priority } from "../lib/supabase";
 
 export function Modal({ title, onClose, children, footer }: {
@@ -77,9 +78,9 @@ export function PriorityBadge({ p }: { p: Priority }) {
 }
 
 export function HealthBadge({ delayed, onHold, completed }: { delayed: boolean; onHold: boolean; completed: boolean }) {
-  if (completed) return <span className="badge ok">Completed</span>;
-  if (onHold) return <span className="badge">On hold</span>;
-  return delayed ? <span className="badge bad">Delayed</span> : <span className="badge ok">On time</span>;
+  if (completed) return <span className="badge ok dot">Completed</span>;
+  if (onHold) return <span className="badge dot">On hold</span>;
+  return delayed ? <span className="badge bad dot">Delayed</span> : <span className="badge ok dot">On time</span>;
 }
 
 export function Stepper({ stage }: { stage: Stage }) {
@@ -120,4 +121,24 @@ export function rowLink(go: () => void) {
     onClick: go,
     onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } },
   };
+}
+
+/** Round initials badge for a person. Colour is picked from the name so each person keeps theirs. */
+export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+  const clean = (name || "?").replace(/@.*/, "").trim();
+  const parts = clean.split(/[\s._-]+/).filter(Boolean);
+  const initials = ((parts[0]?.[0] ?? "?") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  let h = 0; for (const ch of clean) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return <span className="avatar" aria-hidden="true" style={{ width: size, height: size, fontSize: size * 0.38, ["--h" as string]: h }}>{initials}</span>;
+}
+
+/** Headline number tile for dashboards. */
+export function Kpi({ icon, label, value, tone, hint }: { icon: IconName; label: string; value: ReactNode; tone?: "ok" | "bad" | "warn" | "info"; hint?: ReactNode }) {
+  return (
+    <div className={`card kpi ${tone ?? ""}`}>
+      <div className="kpi-top"><span className={`kpi-icon ${tone ?? ""}`}><Icon name={icon} size={18} /></span><div className="label">{label}</div></div>
+      <div className="value">{value}</div>
+      {hint && <div className="hint">{hint}</div>}
+    </div>
+  );
 }

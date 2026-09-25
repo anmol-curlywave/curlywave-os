@@ -1,6 +1,6 @@
 import { TASK_STATUSES, supabase, type Task, type TaskStatus } from "../lib/supabase";
 import { fmtDate, isOverdue } from "../lib/format";
-import { Empty, PriorityBadge } from "./ui";
+import { Avatar, Empty, PriorityBadge } from "./ui";
 
 export default function TaskTable({ tasks, names, clientNames, onEdit, onChanged, hideClient }: {
   tasks: Task[];
@@ -32,7 +32,7 @@ export default function TaskTable({ tasks, names, clientNames, onEdit, onChanged
                 {t.description && <div className="small muted">{t.description}</div>}
               </td>
               {!hideClient && <td>{t.client_id ? clientNames?.[t.client_id] ?? "—" : <span className="muted">Internal</span>}</td>}
-              <td>{t.assignee_id ? names[t.assignee_id] ?? "—" : <span className="muted">Unassigned</span>}</td>
+              <td>{t.assignee_id && names[t.assignee_id] ? <span className="person"><Avatar name={names[t.assignee_id]} size={24} />{names[t.assignee_id]}</span> : t.assignee_id ? "—" : <span className="muted">Unassigned</span>}</td>
               <td>{late ? <span className="badge bad">{fmtDate(t.due_date)}</span> : fmtDate(t.due_date)}</td>
               <td>
                 <select aria-label={`Status of ${t.title}`} value={t.status} onChange={(e) => setStatus(t, e.target.value as TaskStatus)} style={{ width: 130 }}>

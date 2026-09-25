@@ -80,7 +80,12 @@ export default function Employees() {
         <div className="card mt">
           <h2 className="mb">Client logins ({clientsUsers.length})</h2>
           <ul className="list">
-            {clientsUsers.map((u) => <li key={u.id}><b>{u.full_name || "—"}</b> <span className="muted">{u.email}</span>{!u.is_active && <span className="badge">Disabled</span>}</li>)}
+            {clientsUsers.map((u) => (
+              <li key={u.id} style={{ alignItems: "center" }}>
+                <span style={{ flex: 1 }}><b>{u.full_name || "—"}</b> <span className="muted">{u.email}</span>{!u.is_active && <span className="badge">Disabled</span>}</span>
+                <button className="btn sm" onClick={() => nav(`/employees/${u.id}`)}>Manage login</button>
+              </li>
+            ))}
           </ul>
         </div>
       )}

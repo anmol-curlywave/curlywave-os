@@ -69,7 +69,7 @@ export default function Clients() {
           </select>
         </div>
 
-        {filtered.length === 0 ? <Empty>No clients match.</Empty> : (
+        {filtered.length === 0 ? <Empty icon="search">No clients match these filters. Try clearing the search or filters.</Empty> : (
           <div className="table-wrap"><table>
             <thead><tr><th>Code</th><th>Client</th><th>Stage</th><th style={{ width: 170 }}>Progress</th><th>Stage due</th>{isAdmin && <th>Owner</th>}<th>Open tasks</th><th>Status</th></tr></thead>
             <tbody>

@@ -187,6 +187,8 @@ His PC ("anmol-pc", Windows) has Node.js and Git installed. The code folder is `
 
 **UI refresh (25 Sep):** style "clean light admin + soft cards" (Shopify-like layout, Runey-like cards), picked by Claude. Inter font, Lucide icons, light sidebar with white active item, KPI tiles with coloured icons (`Kpi`), initials avatars (`Avatar`), rounded tables, stage bars on the dashboard, greeting header, 2-column KPIs on phones. Purple brand kept; dark mode kept. Also fixed: the page no longer reloads itself on the very first visit (service worker install).
 
+**Design pass 2 (26 Sep, ui-ux-pro-max skill + 21st.dev):** dashboard gets a hand-drawn SVG "Task throughput" area chart (opened dashed vs completed filled — distinguished by form, not colour) and a "Recent activity" feed with avatars, both adapted from 21st.dev "App Dashboard Layout" (shadcnstore/app-1); the Tasks board gets HTML5 drag & drop between columns with drop highlight and coloured column dots, adapted from 21st.dev "Kanban" (TomIsLoading) — the status dropdown on each card stays as the keyboard/single-pointer alternative (WCAG 2.5.7). Skeleton loading replaces "Loading…", empty states have icons and a next step. No new dependencies. 21st.dev free tier = 2 component-code downloads/day (both used 26 Sep); the 21st connector plugin holds the API key.
+
 **Still open:**
 1. The Windows installer hasn't been installed on his PC. It needs him to click "More info → Run anyway" at the SmartScreen warning, which Claude must not bypass.
 2. The Mac apps haven't been tried on a real Mac.

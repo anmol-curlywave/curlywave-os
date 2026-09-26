@@ -10,7 +10,7 @@ export default function TaskTable({ tasks, names, clientNames, onEdit, onChanged
   onChanged: () => void;
   hideClient?: boolean;
 }) {
-  if (tasks.length === 0) return <Empty>No tasks here.</Empty>;
+  if (tasks.length === 0) return <Empty icon="tasks">No tasks here. Use <b>New task</b> to add one.</Empty>;
 
   async function setStatus(t: Task, status: TaskStatus) {
     const { error } = await supabase.from("tasks").update({ status }).eq("id", t.id);

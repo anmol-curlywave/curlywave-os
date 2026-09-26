@@ -363,3 +363,54 @@ td.name-cell { min-width: 190px; }
   .kpi .label { font-size: 12px; }
   .kpi-icon { width: 30px; height: 30px; }
 }
+
+/* ---------- Skeleton loading ---------- */
+.skeleton-page { padding: 4px 0; }
+.sk { background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%); background-size: 200% 100%; animation: sk-shimmer 1.4s ease infinite; border-radius: 10px; }
+@keyframes sk-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+.sk-title { height: 30px; width: 260px; margin-bottom: 18px; }
+.sk-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 18px; }
+.sk-card { height: 104px; }
+.sk-block { height: 260px; }
+
+/* ---------- Empty states ---------- */
+.empty { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.empty-icon { width: 42px; height: 42px; border-radius: 12px; background: var(--surface-2); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+
+/* ---------- Dashboard chart ---------- */
+.chart { margin: 0; }
+.chart-svg { width: 100%; height: auto; display: block; }
+.chart-grid { stroke: var(--border); stroke-dasharray: 3 3; }
+.chart-tick { fill: var(--muted); font-size: 10px; }
+.chart-line { fill: none; stroke-width: 2; stroke-linecap: round; }
+.chart-line.done { stroke: var(--brand); }
+.chart-line.open { stroke: var(--muted); stroke-dasharray: 4 4; }
+.chart-dot { fill: var(--brand); }
+.chart-hit { fill: transparent; }
+.chart-hit:hover + .chart-dot { r: 5; }
+.chart-legend { display: flex; gap: 18px; justify-content: center; color: var(--muted); margin-top: 6px; }
+.chart-legend .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.chart-legend .swatch.done { background: var(--brand); }
+.chart-legend .swatch.open { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px); }
+
+/* ---------- Activity feed ---------- */
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.feed li { display: flex; gap: 10px; align-items: flex-start; }
+.feed p { margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
+
+/* ---------- Board drag & drop ---------- */
+.tcard[draggable] { cursor: grab; transition: box-shadow .15s, transform .15s, border-color .15s; }
+.tcard[draggable]:hover { box-shadow: 0 4px 14px rgba(16, 15, 40, 0.1); border-color: var(--brand); }
+.tcard[draggable]:active { cursor: grabbing; }
+.col { transition: background .15s, outline-color .15s; outline: 2px dashed transparent; outline-offset: -2px; }
+.col.drag-over { background: var(--brand-soft); outline-color: var(--brand); }
+.col-head { align-items: center; gap: 8px; display: flex; justify-content: flex-start; }
+.col-head .count { margin-left: auto; background: var(--surface); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
+.col-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.col-dot.in_progress { background: var(--info); }
+.col-dot.review { background: var(--warn); }
+.col-dot.blocked { background: var(--bad); }
+.col-dot.done { background: var(--ok); }
+@media (prefers-reduced-motion: reduce) { .tcard[draggable] { transition: none; } }
+td.client-cell { min-width: 210px; }

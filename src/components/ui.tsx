@@ -104,12 +104,25 @@ export function Stepper({ stage }: { stage: Stage }) {
   );
 }
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>;
+export function Empty({ children, icon }: { children: ReactNode; icon?: IconName }) {
+  return (
+    <div className="empty">
+      {icon && <span className="empty-icon"><Icon name={icon} size={22} /></span>}
+      <div>{children}</div>
+    </div>
+  );
 }
 
+/** Grey placeholder blocks while data loads — keeps the layout steady instead of a text flash. */
 export function Loading() {
-  return <div className="empty">Loading…</div>;
+  return (
+    <div className="skeleton-page" role="status" aria-label="Loading">
+      <div className="sk sk-title" />
+      <div className="sk-row">{[0, 1, 2, 3].map((i) => <div key={i} className="sk sk-card" />)}</div>
+      <div className="sk sk-block" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
 }
 
 /** Props that make a clickable table row work with the keyboard too (Tab to it, Enter to open). */

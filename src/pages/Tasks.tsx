@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase, TASK_STATUSES, type Profile, type Task, type TaskStatus } from "../lib/supabase";
 import Icon from "../components/Icon";
@@ -21,6 +21,7 @@ export default function Tasks({ mine = false }: { mine?: boolean }) {
   const [showDone, setShowDone] = useState(false);
   const [onlyLate, setOnlyLate] = useState(false);
   const [modal, setModal] = useState<Task | "new" | null>(null);
+  const [overCol, setOverCol] = useState<TaskStatus | null>(null);
 
   const load = useCallback(async () => {
     const [t, p, c] = await Promise.all([
@@ -57,8 +58,25 @@ export default function Tasks({ mine = false }: { mine?: boolean }) {
   };
 
   async function move(t: Task, status: TaskStatus) {
+    if (t.status === status) return;
+    // Optimistic: the card jumps columns at once, then the server confirms.
+    setTasks((prev) => (prev ?? []).map((x) => (x.id === t.id ? { ...x, status } : x)));
     const { error } = await supabase.from("tasks").update({ status }).eq("id", t.id);
-    if (error) alert(error.message); else load();
+    if (error) { alert(error.message); load(); } else load();
+  }
+
+  // Drag & drop between board columns (adapted from 21st.dev "Kanban" by TomIsLoading).
+  // The status dropdown on each card stays as the keyboard / single-pointer alternative.
+  function onDragStart(e: DragEvent, t: Task) {
+    e.dataTransfer.setData("text/task-id", t.id);
+    e.dataTransfer.effectAllowed = "move";
+  }
+  function onDrop(e: DragEvent, status: TaskStatus) {
+    e.preventDefault();
+    setOverCol(null);
+    const id = e.dataTransfer.getData("text/task-id");
+    const t = tasks?.find((x) => x.id === id);
+    if (t) move(t, status);
   }
 
   return (
@@ -104,10 +122,13 @@ export default function Tasks({ mine = false }: { mine?: boolean }) {
             {TASK_STATUSES.map((s) => {
               const col = filtered.filter((t) => t.status === s.key);
               return (
-                <div className="col" key={s.key}>
-                  <div className="col-head"><span>{s.label}</span><span className="muted">{col.length}</span></div>
+                <div className={`col ${overCol === s.key ? "drag-over" : ""}`} key={s.key}
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOverCol(s.key); }}
+                  onDragLeave={() => setOverCol((c) => (c === s.key ? null : c))}
+                  onDrop={(e) => onDrop(e, s.key)}>
+                  <div className="col-head"><span className={`col-dot ${s.key}`} aria-hidden /><span>{s.label}</span><span className="muted count">{col.length}</span></div>
                   {col.slice(0, 60).map((t) => (
-                    <div className="tcard" key={t.id}>
+                    <div className="tcard" key={t.id} draggable onDragStart={(e) => onDragStart(e, t)}>
                       <div className="t"><button type="button" className="linklike" onClick={() => setModal(t)}>{t.title}</button></div>
                       <div className="meta">
                         {t.client_id && <Link to={`/clients/${t.client_id}`}>{clientNames[t.client_id]}</Link>}

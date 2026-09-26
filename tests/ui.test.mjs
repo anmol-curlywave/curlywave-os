@@ -121,6 +121,17 @@ for (const vp of Object.keys(VIEWPORTS)) {
 // ---------- Admin flows ----------
 {
   const { ctx, page, errors, store } = await newPage(browser, "desktop", "u-admin");
+  // dashboard: chart + activity feed render
+  await page.goto(BASE + "/");
+  await page.getByText("Task throughput").waitFor({ timeout: 6000 }).then(() => ok(true, "dashboard chart card"), () => ok(false, "dashboard chart card"));
+  ok(await page.locator("figure.chart svg").count() === 1, "throughput chart svg renders");
+  await page.getByText("Recent activity").waitFor();
+  ok(await page.locator(".feed li").count() >= 1, "activity feed has entries");
+  // board: cards are draggable and columns have counts
+  await page.goto(BASE + "/tasks");
+  await page.getByRole("button", { name: "Board" }).click();
+  ok(await page.locator('.tcard[draggable="true"]').count() > 0, "board cards draggable");
+  ok(await page.locator(".col-dot").count() === 5, "board column dots");
   // sorting: 9 before 37 before 100 before 150 before 290
   await page.goto(BASE + "/clients");
   await page.getByText("Tiwari Motors").first().waitFor();

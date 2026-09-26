@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase, STAGES, type ClientOverview, type Workload } from "../lib/supabase";
+import { supabase, STAGES, type ClientOverview, type Profile, type Task, type Workload } from "../lib/supabase";
+import ThroughputChart from "../components/ThroughputChart";
+import { fmtDateTime } from "../lib/format";
 import { Avatar, HealthBadge, Kpi, Loading, Progress, StageBadge, Empty, rowLink } from "../components/ui";
 import Icon from "../components/Icon";
 import { useAuth } from "../lib/auth";
@@ -10,12 +12,18 @@ import { useRefreshOnFocus } from "../lib/useRefresh";
 export default function Dashboard() {
   const [clients, setClients] = useState<ClientOverview[] | null>(null);
   const [team, setTeam] = useState<Workload[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
   const nav = useNavigate();
   const { profile } = useAuth();
 
   const load = useCallback(() => {
     supabase.from("client_overview").select("*").then(({ data }) => setClients(((data as ClientOverview[]) ?? []).sort(byCode)));
     supabase.from("employee_workload").select("*").eq("is_active", true).order("full_name").then(({ data }) => setTeam((data as Workload[]) ?? []));
+    supabase.from("tasks").select("id,created_at,completed_at").limit(2000).then(({ data }) => setTasks((data as Task[]) ?? []));
+    supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(8).then(({ data }) => setActivity((data as ActivityRow[]) ?? []));
+    supabase.from("profiles").select("id,full_name,email").then(({ data }) => setNames(Object.fromEntries(((data as Profile[]) ?? []).map((x) => [x.id, x.full_name || x.email]))));
   }, []);
   useEffect(() => { load(); }, [load]);
   useRefreshOnFocus(load);
@@ -56,16 +64,24 @@ export default function Dashboard() {
         <Kpi icon="trend" tone="info" label="Avg. progress" value={`${stats.avg}%`} hint={<Progress pct={stats.avg} />} />
       </div>
 
+      <div className="card mb">
+        <div className="card-head">
+          <h2>Task throughput</h2>
+          <span className="muted small">Opened vs completed, last 8 weeks</span>
+        </div>
+        <ThroughputChart tasks={tasks} />
+      </div>
+
       <div className="grid side">
         <div className="card">
           <div className="card-head"><h2>Delayed clients</h2><span className="badge bad">{delayed.length}</span></div>
-          {delayed.length === 0 ? <Empty>Nothing is running late.</Empty> : (
+          {delayed.length === 0 ? <Empty icon="check">Nothing is running late.</Empty> : (
             <div className="table-wrap"><table>
               <thead><tr><th>Client</th><th>Stage</th><th>Owner</th><th>Why late</th><th>Overdue tasks</th></tr></thead>
               <tbody>
                 {delayed.map((c) => (
                   <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
-                    <td><b>#{c.client_code}</b> {c.company_name}</td>
+                    <td className="client-cell"><b>#{c.client_code}</b> {c.company_name}</td>
                     <td><StageBadge stage={c.stage} /></td>
                     <td>{c.employee_name ? <span className="person"><Avatar name={c.employee_name} size={24} />{c.employee_name}</span> : <span className="muted">Unassigned</span>}</td>
                     <td><span className="badge bad">{lateReason(c)}</span></td>
@@ -91,7 +107,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="card mt">
+      <div className="grid side mt">
+      <div className="card">
         <div className="card-head"><h2>All clients</h2><Link to="/clients">Open clients →</Link></div>
         {clients.length === 0 ? <Empty>No clients yet. <Link to="/clients?new=1">Add your first client</Link>.</Empty> : (
           <div className="table-wrap"><table>
@@ -99,7 +116,7 @@ export default function Dashboard() {
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id} {...rowLink(() => nav(`/clients/${c.id}`))}>
-                  <td><b>#{c.client_code}</b> {c.company_name}</td>
+                  <td className="client-cell"><b>#{c.client_code}</b> {c.company_name}</td>
                   <td><StageBadge stage={c.stage} /></td>
                   <td><div className="row"><Progress pct={c.progress_pct} tone={c.is_delayed ? "bad" : c.stage === "completed" ? "ok" : undefined} /><span className="small muted">{c.progress_pct}%</span></div></td>
                   <td>{c.employee_name ? <span className="person"><Avatar name={c.employee_name} size={24} />{c.employee_name}</span> : <span className="muted">—</span>}</td>
@@ -109,6 +126,28 @@ export default function Dashboard() {
             </tbody>
           </table></div>
         )}
+      </div>
+
+      <div className="card">
+        <div className="card-head"><h2>Recent activity</h2><span className="muted small">Latest updates from the team</span></div>
+        {activity.length === 0 ? <Empty icon="clock">Nothing has happened yet.</Empty> : (
+          <ol className="feed">
+            {activity.map((a) => {
+              const who = a.actor_id ? names[a.actor_id] ?? "Someone" : "System";
+              const client = clients.find((c) => c.id === a.client_id);
+              return (
+                <li key={a.id}>
+                  <Avatar name={who} size={30} />
+                  <div style={{ minWidth: 0 }}>
+                    <p><b>{who}</b> <span className="muted">{feedText(a)}</span>{client && <> · <Link to={`/clients/${client.id}`}>#{client.client_code} {client.company_name}</Link></>}</p>
+                    <p className="small muted">{fmtDateTime(a.created_at)}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
       </div>
 
       <div className="card mt">
@@ -131,6 +170,19 @@ export default function Dashboard() {
       </div>
     </>
   );
+}
+
+interface ActivityRow { id: number; client_id: string | null; actor_id: string | null; action: string; details: Record<string, string | null>; created_at: string }
+
+function feedText(a: ActivityRow) {
+  const st = (k?: string | null) => STAGES.find((s) => s.key === k)?.label ?? k ?? "";
+  switch (a.action) {
+    case "client_created": return "added a new client";
+    case "stage_changed": return `moved the stage to ${st(a.details.to)}`;
+    case "client_reassigned": return "reassigned the client";
+    case "task_status": return `marked "${a.details.title}" as ${(a.details.to ?? "").replace("_", " ")}`;
+    default: return a.action.replace(/_/g, " ");
+  }
 }
 
 function greeting() {
